@@ -6,9 +6,10 @@ from antlr4 import*
 from VfrSyntaxLexer import VfrSyntaxLexer
 from VfrSyntaxParser import VfrSyntaxParser
 from VfrSyntaxVisitor import VfrSyntaxVisitor
-
+from VfrError import *
 
 def VfrParse(Infile, YamlOutFile, JsonOutFile):
+    gCVfrErrorHandle.SetInputFile (Infile)
     InputStream = FileStream(Infile)
     Lexer = VfrSyntaxLexer(InputStream)
     Stream = CommonTokenStream(Lexer)
