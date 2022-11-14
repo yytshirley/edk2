@@ -38,26 +38,26 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         self.__UsedDefaultArray = []
 
         self.__CVfrRulesDB = CVfrRulesDB()
-        self.__CIfrOpHdr = []  # 
+        self.__CIfrOpHdr = []  #
         self.__CIfrOpHdrLineNo = []
         self.__CurrQestVarInfo = EFI_VARSTORE_INFO()
 
         self.__CVfrQuestionDB = CVfrQuestionDB()
         self.__CurrentQuestion = None
-        self.__CurrentMinMaxData = None # 
+        self.__CurrentMinMaxData = None #
 
-        self.__IsStringOp = False 
-        self.__IsOrderedList = False 
+        self.__IsStringOp = False
+        self.__IsOrderedList = False
         self.__IsCheckBoxOp = False
         self.__Root = VfrTreeNode()
-    
+
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrProgram.
     def visitVfrProgram(self, ctx:VfrSyntaxParser.VfrProgramContext):
 
         #self.__CVfrQuestionDB.PrintAllQuestion('test\\Questions.txt')
         #gCVfrVarDataTypeDB.Dump("test\\DataTypeInfo.txt")
-        
+
         return self.visitChildren(ctx)
 
     # Visit a parse tree produced by VfrSyntaxParser#pragmaPackShowDef.
@@ -111,7 +111,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         if ctx.N1 != None:
             ReturnCode = gCVfrVarDataTypeDB.SetNewTypeName(ctx.N1.text)
             self.__ErrorHandler(ReturnCode, ctx.N1.line, ctx.N1.text)
-        
+
         if ctx.N2 != None:
             ReturnCode = gCVfrVarDataTypeDB.SetNewTypeName(ctx.N2.text)
             self.__ErrorHandler(ReturnCode, ctx.N2.line, ctx.N2.text)
@@ -129,7 +129,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         if ctx.N1 != None:
             ReturnCode = gCVfrVarDataTypeDB.SetNewTypeName(ctx.N1.text)
             self.__ErrorHandler(ReturnCode, ctx.N1.line, ctx.N1.text)
-        
+
         if ctx.N2 != None:
             ReturnCode = gCVfrVarDataTypeDB.SetNewTypeName(ctx.N2.text)
             self.__ErrorHandler(ReturnCode, ctx.N2.line, ctx.N2.text)
@@ -235,7 +235,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             self.__ErrorHandler(gCVfrVarDataTypeDB.DataTypeAddBitField(ctx.N.text, 'UINT64', Width, ctx.FieldInUnion), ctx.N.line, ctx.N.text)
         else:
             self.__ErrorHandler(gCVfrVarDataTypeDB.DataTypeAddBitField(None, 'UINT64', Width, ctx.FieldInUnion), ctx.D.line, ctx.D.text)
-            
+
         return self.visitChildren(ctx)
 
 
@@ -290,7 +290,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         self.__InsertChild(ctx.Node, ctx.subclassDefinition())
         Line = ctx.start.line
         self.__DeclareStandardDefaultStorage(Line)
-        
+
         self.visitChildren(ctx)
         ClassGuidNum = 0
         GuidList = []
@@ -363,7 +363,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
     def visitClassguidDefinition(self, ctx:VfrSyntaxParser.ClassguidDefinitionContext):
 
         self.visitChildren(ctx)
-        
+
         for GuidCtx in ctx.guidDefinition():
             ctx.GuidList.append(GuidCtx.Guid)
 
@@ -441,7 +441,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         self.visitChildren(ctx)
         for Ctx in ctx.vfrFormSet():
             self.__InsertChild(ctx.Node, Ctx)
-        
+
         return ctx.Node
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrFormSet.
@@ -512,7 +512,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         IsBitVarStore = False
         if ctx.TN != None:
             IsBitVarStore = gCVfrVarDataTypeDB.DataTypeHasBitField(ctx.TN.text)
-            
+
         VarStoreId = EFI_VARSTORE_ID_INVALID
         if ctx.VarId() != None:
             VarStoreId = self.__TransNum(ctx.ID.text)
@@ -521,7 +521,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         Guid = ctx.guidDefinition().Guid
         self.__ErrorHandler(gCVfrDataStorage.DeclareBufferVarStore(StoreName, Guid, gCVfrVarDataTypeDB, TypeName, VarStoreId, IsBitVarStore), Line)
         VSObj.SetGuid(Guid)
-        VarStoreId, ReturnCode = gCVfrDataStorage.GetVarStoreId(StoreName, Guid) 
+        VarStoreId, ReturnCode = gCVfrDataStorage.GetVarStoreId(StoreName, Guid)
         self.__ErrorHandler(ReturnCode, ctx.SN.line, ctx.SN.text)
         VSObj.SetVarStoreId(VarStoreId)
         Size, ReturnCode = gCVfrVarDataTypeDB.GetDataTypeSizeByTypeName(TypeName)
@@ -562,7 +562,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         if ctx.VarId() != None:
             VarStoreId = self.__TransNum(ctx.ID.text)
             self.__CompareErrorHandler(VarStoreId!=0, True, ctx.ID.line, ctx.ID.text, 'varid 0 is not allowed.')
-            
+
         Attributes = 0
         for AtrCtx in ctx.vfrVarStoreEfiAttr():
             Attributes |= AtrCtx.Attr
@@ -583,25 +583,25 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             elif Size == 2: TypeName = 'UINT16'
             elif Size == 4: TypeName = 'UINT32'
             elif Size == 8: TypeName = 'UINT64'
-            else: 
+            else:
                 self.__ErrorHandler(VfrReturnCode.VFR_RETURN_UNSUPPORTED, ctx.N.line, ctx.N.text)
 
         if IsUEFI23EfiVarstore:
             self.__ErrorHandler(gCVfrDataStorage.DeclareBufferVarStore(StoreName, Guid, gCVfrVarDataTypeDB, TypeName, VarStoreId, IsBitVarStore, Attributes), Line)
-            VarStoreId, ReturnCode = gCVfrDataStorage.GetVarStoreId(StoreName, Guid) 
+            VarStoreId, ReturnCode = gCVfrDataStorage.GetVarStoreId(StoreName, Guid)
             self.__ErrorHandler(ReturnCode, ctx.SN.line, ctx.SN.text)
             Size, ReturnCode = gCVfrVarDataTypeDB.GetDataTypeSizeByTypeName(TypeName)
             self.__ErrorHandler(ReturnCode, Line)
         else:
             self.__ErrorHandler(gCVfrDataStorage.DeclareBufferVarStore(self.__GetText(ctx.TN), Guid, gCVfrVarDataTypeDB, TypeName, VarStoreId, IsBitVarStore, Attributes), Line) #
-            VarStoreId, ReturnCode = gCVfrDataStorage.GetVarStoreId(self.__GetText(ctx.TN), Guid) 
+            VarStoreId, ReturnCode = gCVfrDataStorage.GetVarStoreId(self.__GetText(ctx.TN), Guid)
             self.__ErrorHandler(ReturnCode, ctx.VN.line, ctx.VN.text)
             Size, ReturnCode = gCVfrVarDataTypeDB.GetDataTypeSizeByTypeName(TypeName)
             self.__ErrorHandler(ReturnCode, ctx.N.line)
 
         VSEObj.SetGuid(Guid)
         VSEObj.SetVarStoreId (VarStoreId)
-        VSEObj.SetSize(Size) 
+        VSEObj.SetSize(Size)
         VSEObj.SetName(StoreName)
 
         ctx.Node.Data = VSEObj
@@ -816,13 +816,13 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
         elif ctx.ReconnectRequiredFlag() != None:
             ctx.QHFlag = 0x40
-       
+
         elif ctx.OptionOnlyFlag() != None:
             gCVfrErrorHandle.HandleWarning(EFI_VFR_WARNING_CODE.VFR_WARNING_OBSOLETED_FRAMEWORK_OPCODE, ctx.O.line, ctx.O.text)
-        
+
         elif ctx.NVAccessFlag() != None:
             gCVfrErrorHandle.HandleWarning(EFI_VFR_WARNING_CODE.VFR_WARNING_OBSOLETED_FRAMEWORK_OPCODE, ctx.N.line, ctx.N.text)
-        
+
         elif ctx.LateCheckFlag() != None:
             gCVfrErrorHandle.HandleWarning(EFI_VFR_WARNING_CODE.VFR_WARNING_OBSOLETED_FRAMEWORK_OPCODE, ctx.L.line, ctx.L.text)
 
@@ -912,10 +912,10 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
         if ctx.TrueSymbol() != None:
             ctx.Value.b = 1
-           
+
         elif ctx.FalseSymbol() != None:
             ctx.Value.b = 0
-            
+
         elif ctx.One() != None:
             ctx.Value.u8 = int(ctx.getText())
 
@@ -934,16 +934,16 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             ctx.Value.date.Year = self.__TransNum(ctx.Number(0))
             ctx.Value.date.Month = self.__TransNum(ctx.Number(1))
             ctx.Value.date.Day = self.__TransNum(ctx.Number(2))
-            
+
         elif ctx.Semicolon() != []:
             ctx.Value.ref.QuestionId = self.__TransNum(ctx.Number(0))
             ctx.Value.ref.FormId = self.__TransNum(ctx.Number(1))
             ctx.Value.ref.DevicePath = self.__TransNum(ctx.Number(2))
             ctx.Value.ref.FormSetGuid = ctx.guidDefinition().Guid
-            
+
         elif ctx.StringToken() != None:
             ctx.Value.string = self.__TransNum(ctx.Number(0))
-            
+
         elif ctx.OpenBrace() != None:
             ctx.ListType = True
             Type = self.__CurrQestVarInfo.VarType
@@ -1030,7 +1030,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrImageTag.
     def visitVfrImageTag(self, ctx:VfrSyntaxParser.VfrImageTagContext):
-        
+
         IObj = CIfrImage()
         self.visitChildren(ctx)
         IObj.SetLineNo(ctx.start.line)
@@ -1053,7 +1053,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementStatTag.
     def visitVfrStatementStatTag(self, ctx:VfrSyntaxParser.VfrStatementStatTagContext):
-        
+
         self.visitChildren(ctx)
         if ctx.vfrImageTag() != None:
             ctx.Node = ctx.vfrImageTag().Node
@@ -1065,11 +1065,11 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementStatTagList.
     def visitVfrStatementStatTagList(self, ctx:VfrSyntaxParser.VfrStatementStatTagListContext):
-        
+
         self.visitChildren(ctx)
         for Ctx in ctx.vfrStatementStatTag():
             self.__InsertChild(ctx.Node, Ctx)
-            
+
         return ctx.Node
 
 
@@ -1093,7 +1093,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrForm.
     def visitVfrForm(self, ctx:VfrSyntaxParser.VfrFormContext):
-        
+
         self.visitChildren(ctx)
         if ctx.vfrStatementImage() != None:
             ctx.Node = ctx.vfrStatementImage().Node
@@ -1148,7 +1148,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementImage.
     def visitVfrStatementImage(self, ctx:VfrSyntaxParser.VfrStatementImageContext):
-        
+
         self.visitChildren(ctx)
         ctx.Node = ctx.vfrImageTag().Node
         return ctx.Node
@@ -1156,7 +1156,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementLocked.
     def visitVfrStatementLocked(self, ctx:VfrSyntaxParser.VfrStatementLockedContext):
-        
+
         self.visitChildren(ctx)
         ctx.Node = ctx.vfrLockedTag().Node
         return ctx.Node
@@ -1202,7 +1202,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
         Prompt = self.__TransNum(ctx.Number())
         SObj.SetPrompt(Prompt)
-        
+
         self.visitChildren(ctx)
 
         if ctx.vfrSubtitleFlags() != None:
@@ -1218,7 +1218,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementSubTitleComponent.
     def visitVfrStatementSubTitleComponent(self, ctx:VfrSyntaxParser.VfrStatementSubTitleComponentContext):
-        
+
         self.visitChildren(ctx)
         if ctx.vfrStatementQuestions() != None:
             ctx.Node = ctx.vfrStatementQuestions().Node
@@ -1313,7 +1313,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementCrossReference.
     def visitVfrStatementCrossReference(self, ctx:VfrSyntaxParser.VfrStatementCrossReferenceContext):
-        
+
         self.visitChildren(ctx)
         if ctx.vfrStatementGoto() != None:
             ctx.Node = ctx.vfrStatementGoto().Node
@@ -1367,7 +1367,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 Name = ctx.QN.text
                 QId, BitMask, _ = self.__CVfrQuestionDB.GetQuestionId(Name)
                 if QId == EFI_QUESTION_ID_INVALID:
-                    self.__ErrorHandler(VfrReturnCode.VFR_RETURN_UNDEFINED, ctx.QN.line) 
+                    self.__ErrorHandler(VfrReturnCode.VFR_RETURN_UNDEFINED, ctx.QN.line)
             else:
                 QId = self.__TransNum(ctx.Number(1))
             R2Obj = CIfrRef2()
@@ -1476,7 +1476,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementQuestionTag.
     def visitVfrStatementQuestionTag(self, ctx:VfrSyntaxParser.VfrStatementQuestionTagContext):
-        
+
         self.visitChildren(ctx)
         if ctx.vfrStatementStatTag() != None:
             ctx.Node = ctx.vfrStatementStatTag().Node
@@ -1582,13 +1582,13 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         WIObj.SetTimeOut(self.__TransNum(ctx.Number(1)))
         ctx.Node.Data = WIObj
         ctx.Node.Expression = self.__ExtractOriginalText(ctx.vfrStatementExpression())
-        
+
         return ctx.Node
 
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementQuestionTagList.
     def visitVfrStatementQuestionTagList(self, ctx:VfrSyntaxParser.VfrStatementQuestionTagListContext):
-        
+
         self.visitChildren(ctx)
         for Ctx in ctx.vfrStatementQuestionTag():
             self.__InsertChild(ctx.Node, Ctx)
@@ -1596,11 +1596,11 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementQuestionOptionTag.
     def visitVfrStatementQuestionOptionTag(self, ctx:VfrSyntaxParser.VfrStatementQuestionOptionTagContext):
-        
+
         self.visitChildren(ctx)
         if ctx.vfrStatementSuppressIfQuest() != None:
             ctx.Node = ctx.vfrStatementSuppressIfQuest().Node
-            
+
         if ctx.vfrStatementGrayOutIfQuest() != None:
             ctx.Node = ctx.vfrStatementGrayOutIfQuest().Node
 
@@ -1641,7 +1641,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         ctx.Node.Condition = 'grayoutif' + ' ' + self.__ExtractOriginalText(ctx.vfrStatementExpression())
         self.visitChildren(ctx)
         return ctx.Node
-    
+
     # Visit a parse tree produced by VfrSyntaxParser#flagsField.
     def visitFlagsField(self, ctx:VfrSyntaxParser.FlagsFieldContext):
 
@@ -1649,7 +1649,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             CVfrErrorHandle.HandleWarning(EFI_VFR_WARNING_CODE.VFR_WARNING_OBSOLETED_FRAMEWORK_OPCODE, ctx.N.line, ctx.N.text)
         if ctx.L != None:
             CVfrErrorHandle.HandleWarning(EFI_VFR_WARNING_CODE.VFR_WARNING_OBSOLETED_FRAMEWORK_OPCODE, ctx.L.line, ctx.L.text)
-        
+
         return self.visitChildren(ctx)
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementDefault.
@@ -1665,7 +1665,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             ValueList = ctx.vfrConstantValueField().ValueList
             Type = self.__CurrQestVarInfo.VarType
             Size = 0
-                
+
             if self.__CurrentMinMaxData != None and self.__CurrentMinMaxData.IsNumericOpcode():
                 # check default value is valid for Numeric Opcode
                 if ValueList == []:
@@ -1702,7 +1702,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             if Type == EFI_IFR_TYPE_OTHER:
                 self.__ErrorHandler(VfrReturnCode.VFR_RETURN_FATAL_ERROR, Line, "Default data type error.")
                 Size = sizeof(EFI_IFR_TYPE_VALUE)
-                
+
             elif ctx.vfrConstantValueField().ListType:
                 if Type == EFI_IFR_TYPE_NUM_SIZE_8:
                     Size = sizeof(c_ubyte) * len(ValueList)
@@ -1712,14 +1712,14 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                     Size = sizeof(c_ulong) * len(ValueList)
                 if Type == EFI_IFR_TYPE_NUM_SIZE_64:
                     Size = sizeof(c_ulonglong) * len(ValueList)
-                    
+
             else:
                 if self.__CurrQestVarInfo.IsBitVar:
-                    Size = sizeof(c_ulong) 
+                    Size = sizeof(c_ulong)
                 else:
                     Size, ReturnCode = gCVfrVarDataTypeDB.GetDataTypeSizeByDataType(Type)
                     self.__ErrorHandler(ReturnCode, Line)
-                    
+
             Size += EFI_IFR_DEFAULT.Value.offset
             if not ctx.vfrConstantValueField().ListType:
                 DObj = CIfrDefault(Size)
@@ -1738,7 +1738,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 DObj.SetLineNo(Line)
                 DObj.SetValue(ValueList)
                 DObj.SetType(EFI_IFR_TYPE_BUFFER)
-                
+
         else:
             IsExp = True
             DObj = CIfrDefault2()
@@ -1766,7 +1766,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementValue.
     def visitVfrStatementValue(self, ctx:VfrSyntaxParser.VfrStatementValueContext):
-        
+
         VObj = CIfrValue()
         self.visitChildren(ctx)
 
@@ -1778,7 +1778,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementOptions.
     def visitVfrStatementOptions(self, ctx:VfrSyntaxParser.VfrStatementOptionsContext):
-        
+
         self.visitChildren(ctx)
         ctx.Node = ctx.vfrStatementOneOfOption().Node
         return ctx.Node
@@ -1786,7 +1786,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementOneOfOption.
     def visitVfrStatementOneOfOption(self, ctx:VfrSyntaxParser.VfrStatementOneOfOptionContext):
-        
+
         Line = ctx.start.line
         if self.__CurrQestVarInfo.VarType == EFI_IFR_TYPE_OTHER:
             self.__ErrorHandler(VfrReturnCode.VFR_RETURN_FATAL_ERROR, Line, "Get data type error.")
@@ -1830,7 +1830,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             else:
                 Size, ReturnCode = gCVfrVarDataTypeDB.GetDataTypeSizeByDataType(Type)
                 self.__ErrorHandler(ReturnCode, Line)
-        
+
         Size += EFI_IFR_ONE_OF_OPTION.Value.offset
         OOOObj = None
         if not ctx.vfrConstantValueField().ListType:
@@ -1844,11 +1844,11 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             OOOObj = CIfrOneOfOption2(Size, len(ValueList), Type)
             OOOObj.SetType(EFI_IFR_TYPE_BUFFER)
             OOOObj.SetValue(ValueList)
-            
-            
+
+
         OOOObj.SetLineNo(Line)
         OOOObj.SetOption(self.__TransNum(ctx.Number(0)))
-            
+
 
         self.__ErrorHandler(OOOObj.SetFlags(ctx.vfrOneOfOptionFlags().LFlags), ctx.F.line)
         self.__ErrorHandler(self.__CurrentQuestion.SetQHeaderFlags(ctx.vfrOneOfOptionFlags().HFlags), ctx.F.line)
@@ -1866,7 +1866,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             self.__ErrorHandler(ReturnCode, Line)
             VarStoreGuid = gCVfrDataStorage.GetVarStoreGuid(self.__CurrQestVarInfo.VarStoreId)
             if OOOObj.GetFlags() & EFI_IFR_OPTION_DEFAULT:
-                self.__CheckDuplicateDefaultValue(EFI_HII_DEFAULT_CLASS_STANDARD, ctx.F.line, ctx.F.text) 
+                self.__CheckDuplicateDefaultValue(EFI_HII_DEFAULT_CLASS_STANDARD, ctx.F.line, ctx.F.text)
                 self.__ErrorHandler(gCVfrDefaultStore.BufferVarStoreAltConfigAdd(EFI_HII_DEFAULT_CLASS_STANDARD, self.__CurrQestVarInfo, VarStoreName, VarStoreGuid, self.__CurrQestVarInfo.VarType, Value), Line)
             if OOOObj.GetFlags() & EFI_IFR_OPTION_DEFAULT_MFG:
                 self.__CheckDuplicateDefaultValue(EFI_HII_DEFAULT_CLASS_MANUFACTURING, ctx.F.line, ctx.F.text)
@@ -1932,7 +1932,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementRead.
     def visitVfrStatementRead(self, ctx:VfrSyntaxParser.VfrStatementReadContext):
-        
+
         RObj = CIfrRead()
         self.visitChildren(ctx)
 
@@ -1944,7 +1944,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementWrite.
     def visitVfrStatementWrite(self, ctx:VfrSyntaxParser.VfrStatementWriteContext):
-        
+
         WObj = CIfrWrite()
         self.visitChildren(ctx)
 
@@ -1965,11 +1965,11 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementQuestionOption.
     def visitVfrStatementQuestionOption(self, ctx:VfrSyntaxParser.VfrStatementQuestionOptionContext):
-        
+
         self.visitChildren(ctx)
         if ctx.vfrStatementQuestionTag() != None:
             ctx.Node = ctx.vfrStatementQuestionTag().Node
-            
+
         elif ctx.vfrStatementQuestionOptionTag() != None:
             ctx.Node = ctx.vfrStatementQuestionOptionTag().Node
         return ctx.Node
@@ -1977,7 +1977,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementBooleanType.
     def visitVfrStatementBooleanType(self, ctx:VfrSyntaxParser.VfrStatementBooleanTypeContext):
-        
+
         self.visitChildren(ctx)
         if ctx.vfrStatementCheckBox() != None:
             ctx.Node = ctx.vfrStatementCheckBox().Node
@@ -1985,8 +1985,8 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             ctx.Node = ctx.vfrStatementAction().Node
 
         return ctx.Node
-    
-        
+
+
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementCheckBox.
     def visitVfrStatementCheckBox(self, ctx:VfrSyntaxParser.VfrStatementCheckBoxContext):
 
@@ -2410,7 +2410,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         elif self.__CurrQestVarInfo.VarStoreId != EFI_VARSTORE_ID_INVALID and self.__CurrQestVarInfo.IsBitVar:
             ctx.LFlags &= EDKII_IFR_DISPLAY_BIT
             ctx.LFlags |= EDKII_IFR_NUMERIC_SIZE_BIT & self.__CurrQestVarInfo.VarTotalSize
-            
+
         return ctx.HFlags, ctx.LFlags
 
 
@@ -2418,7 +2418,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
     def visitNumericFlagsField(self, ctx:VfrSyntaxParser.NumericFlagsFieldContext):
 
         self.visitChildren(ctx)
-        
+
         Line = ctx.start.line
         if ctx.Number() != None:
             if self.__TransNum(ctx.N.text) != 0:
@@ -2465,7 +2465,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementOneOf.
     def visitVfrStatementOneOf(self, ctx:VfrSyntaxParser.VfrStatementOneOfContext):
-        
+
         OObj = ctx.OpObj
         Line = ctx.start.line
         OObj.SetLineNo(Line)
@@ -2592,7 +2592,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementStringType.
     def visitVfrStatementStringType(self, ctx:VfrSyntaxParser.VfrStatementStringTypeContext):
-        
+
         self.visitChildren(ctx)
         if ctx.vfrStatementPassword() != None:
             ctx.Node = ctx.vfrStatementPassword().Node
@@ -2655,7 +2655,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         SObj.SetMaxSize(StringMaxSize)
 
         ctx.Node.Data = SObj
-        
+
         self.__IsStringOp = False
 
         return ctx.Node
@@ -2757,7 +2757,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementOrderedList.
     def visitVfrStatementOrderedList(self, ctx:VfrSyntaxParser.VfrStatementOrderedListContext):
-        
+
         OLObj = ctx.OpObj
         OLObj.SetLineNo(ctx.start.line)
         self.__CurrentQuestion = OLObj.GetQuestion()
@@ -2778,7 +2778,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             elif VarArraySize != 0 and MaxContainers > VarArraySize:
                 self.__ErrorHandler(VfrReturnCode.VFR_RETURN_INVALID_PARAMETER, ctx.M.line,"OrderedList MaxContainers can't be larger than the max number of elements in array.")
             OLObj.SetMaxContainers(MaxContainers)
-        
+
         if ctx.FLAGS() != None:
             HFlags = ctx.vfrOrderedListFlags().HFlags
             LFlags = ctx.vfrOrderedListFlags().LFlags
@@ -2805,7 +2805,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#orderedlistFlagsField.
     def visitOrderedlistFlagsField(self, ctx:VfrSyntaxParser.OrderedlistFlagsFieldContext):
-        
+
         self.visitChildren(ctx)
 
         if ctx.Number() != None:
@@ -2871,7 +2871,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         return ctx.Node
 
     # Visit a parse tree produced by VfrSyntaxParser#minMaxDateStepDefault.
-    def visitMinMaxDateStepDefault(self, ctx:VfrSyntaxParser.MinMaxDateStepDefaultContext): 
+    def visitMinMaxDateStepDefault(self, ctx:VfrSyntaxParser.MinMaxDateStepDefaultContext):
 
         if ctx.Default() != None:
             Minimum = self.__TransNum(ctx.Number(0))
@@ -2997,7 +2997,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrTimeFlags.
     def visitVfrTimeFlags(self, ctx:VfrSyntaxParser.VfrTimeFlagsContext):
-        
+
         self.visitChildren(ctx)
 
         for FlagsFieldCtx in ctx.timeFlagsField():
@@ -3029,7 +3029,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementConditional.
     def visitVfrStatementConditional(self, ctx:VfrSyntaxParser.VfrStatementConditionalContext):
-        
+
         self.visitChildren(ctx)
         if ctx.vfrStatementDisableIfStat()!= None:
             ctx.Node = ctx.vfrStatementDisableIfStat().Node
@@ -3050,7 +3050,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementSuppressIfStat.
     def visitVfrStatementSuppressIfStat(self, ctx:VfrSyntaxParser.VfrStatementSuppressIfStatContext):
-        
+
         self.visitChildren(ctx)
         ctx.Node = ctx.vfrStatementSuppressIfStatNew().Node
         return ctx.Node
@@ -3058,7 +3058,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementGrayOutIfStat.
     def visitVfrStatementGrayOutIfStat(self, ctx:VfrSyntaxParser.VfrStatementGrayOutIfStatContext):
-        
+
         self.visitChildren(ctx)
         ctx.Node = ctx.vfrStatementGrayOutIfStatNew().Node
         return ctx.Node
@@ -3066,7 +3066,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementStatList.
     def visitVfrStatementStatList(self, ctx:VfrSyntaxParser.VfrStatementStatListContext):
-        
+
         self.visitChildren(ctx)
         if ctx.vfrStatementStat() != None:
             ctx.Node = ctx.vfrStatementStat().Node
@@ -3086,10 +3086,10 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementStatListOld.
     def visitVfrStatementStatListOld(self, ctx:VfrSyntaxParser.VfrStatementStatListOldContext):
         return self.visitChildren(ctx)
-    
+
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementDisableIfStat.
     def visitVfrStatementDisableIfStat(self, ctx:VfrSyntaxParser.VfrStatementDisableIfStatContext):
-        
+
         DIObj = CIfrDisableIf()
         DIObj.SetLineNo(ctx.start.line)
         ctx.Node.Data = DIObj
@@ -3102,7 +3102,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementSuppressIfStatNew.
     def visitVfrStatementSuppressIfStatNew(self, ctx:VfrSyntaxParser.VfrStatementSuppressIfStatNewContext):
-        
+
         SIObj = CIfrSuppressIf()
         SIObj.SetLineNo(ctx.start.line)
         ctx.Node.Data = SIObj
@@ -3131,7 +3131,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementInconsistentIfStat.
     def visitVfrStatementInconsistentIfStat(self, ctx:VfrSyntaxParser.VfrStatementInconsistentIfStatContext):
-        
+
         IIObj = CIfrInconsistentIf()
         self.__ErrorHandler(VfrReturnCode.VFR_RETURN_UNSUPPORTED, ctx.start.line)
         IIObj.SetLineNo(ctx.start.line)
@@ -3165,7 +3165,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementLabel.
     def visitVfrStatementLabel(self, ctx:VfrSyntaxParser.VfrStatementLabelContext):
-        
+
         LObj = CIfrLabel()
         self.visitChildren(ctx)
         LObj.SetLineNo(ctx.start.line)
@@ -3257,13 +3257,13 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         ArrayIdx = 0
         ctx.IsStruct = ctx.parentCtx.IsStruct
         ctx.DataBuff = ctx.parentCtx.DataBuff
-        
+
         self.visitChildren(ctx)
-        
+
         Data = self.__TransNum(ctx.N.text)
         if IsArray == True:
             ArrayIdx = self.__TransNum(self.__TransNum(ctx.Number(0)))
-        ByteOffset  = ArrayIdx * ctx.parentCtx.TypeSize 
+        ByteOffset  = ArrayIdx * ctx.parentCtx.TypeSize
         if ctx.IsStruct == True:
             TFName += ctx.parentCtx.TypeName
             for i in range(0, len(ctx.arrayName())):
@@ -3290,8 +3290,8 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                         Begin = ByteOffset + FieldOffset
                         End = ByteOffset + FieldOffset + FieldSize
                         ctx.DataBuff[Begin: End] = Data
-                        
-                    
+
+
                 if FieldType == EFI_IFR_TYPE_NUM_SIZE_16:
                     Data = ctypes.c_ushort(Data)
                     if BitField:
@@ -3342,14 +3342,14 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementModal.
     def visitVfrStatementModal(self, ctx:VfrSyntaxParser.VfrStatementModalContext):
-        
+
         self.visitChildren(ctx)
         ctx.Node = ctx.vfrModalTag().Node
         return ctx.Node
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrModalTag.
     def visitVfrModalTag(self, ctx:VfrSyntaxParser.VfrModalTagContext):
-        
+
         MObj = CIfrModal()
         self.visitChildren(ctx)
         MObj.SetLineNo(ctx.start.line)
@@ -3380,7 +3380,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementExpression.
     def visitVfrStatementExpression(self, ctx:VfrSyntaxParser.VfrStatementExpressionContext):
-        
+
         # Root expression extension function called by other function. ##
         if ctx.ExpInfo.RootLevel == 0:
             self.__CIfrOpHdrIndex += 1
@@ -3404,7 +3404,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         if ctx.ExpInfo.RootLevel == 0:
             self.__ClearSavedOPHdr()
             self.__CIfrOpHdrIndex = self.__CIfrOpHdrIndex - 1
-        
+
         self.__ConstantOnlyInExpression = False
 
         return ctx.ExpInfo
@@ -3412,7 +3412,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementExpressionSub.
     def visitVfrStatementExpressionSub(self, ctx:VfrSyntaxParser.VfrStatementExpressionSubContext):
-        
+
         ctx.ExpInfo.RootLevel = ctx.parentCtx.ExpInfo.RootLevel + 1
         ctx.ExpInfo.ExpOpCount = ctx.parentCtx.ExpInfo.ExpOpCount
 
@@ -3695,11 +3695,11 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
 
     # Visit a parse tree produced by VfrSyntaxParser#vareqvalExp.
-    def visitVareqvalExp(self, ctx:VfrSyntaxParser.VareqvalExpContext): 
-        
+    def visitVareqvalExp(self, ctx:VfrSyntaxParser.VareqvalExpContext):
+
         Line = ctx.start.line
         self.visitChildren(ctx)
-        
+
         ReturnCode = VfrReturnCode.VFR_RETURN_UNSUPPORTED
         VarIdStr = 'var'
         VarIdStr += str(ctx.Number(0))
@@ -3730,13 +3730,13 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
         elif ctx.Greater() != None:
             self.IdEqValDoSpecial(ctx.ExpInfo, Line, QId, VarIdStr, Mask, ConstVal, EFI_COMPARE_TYPE.GREATER_THAN)
-                
+
 
         return ctx.ExpInfo
 
 
     def ConvertIdExpr(self, ExpInfo, LineNo, QId, VarIdStr, BitMask):
-        
+
         QR1Obj = CIfrQuestionRef1(LineNo)
         QR1Obj.SetQuestionId(QId, VarIdStr, LineNo)
         self.__SaveOpHdrCond(QR1Obj.GetHeader(), (ExpInfo.ExpOpCount == 0))
@@ -3764,7 +3764,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
 
     def IdEqValDoSpecial(self, ExpInfo, LineNo, QId, VarIdStr, BitMask, ConstVal, CompareType):
-        
+
         self.ConvertIdExpr(ExpInfo, LineNo, QId, VarIdStr, BitMask)
         if ConstVal > 0xFF:
             U16Obj = CIfrUint16(LineNo)
@@ -3909,16 +3909,16 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         ValueList = []
         for i in range(0, len(ctx.Number())):
             ValueList.append(self.__TransNum(ctx.Number(i)))
-        
+
         ListLen = len(ValueList)
-        
+
         if Mask != 0:
             self.IdEqListDoSpecial(ctx.ExpInfo, LineNo, QId, VarIdStr, Mask, ListLen, ValueList)
         else:
             EILObj = CIfrEqIdList(Line, ListLen)
             if QId != EFI_QUESTION_ID_INVALID:
                 EILObj.SetQuestionId(QId, VarIdStr, LineNo)
-            EILObj.SetListLength(ListLen)  
+            EILObj.SetListLength(ListLen)
             EILObj.SetValueList(ValueList)
             self.__SaveOpHdrCond(EILObj.GetHeader(), (ctx.ExpInfo.ExpOpCount == 0), Line)
             if QId == EFI_QUESTION_ID_INVALID:
@@ -3967,7 +3967,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 ctx.SubStr += '['
                 ctx.SubStr += str(Idx)
                 ctx.SubStr += ']'
-                
+
             ctx.SubStrZ += '['
             ctx.SubStrZ += str(Idx)
             ctx.SubStrZ += ']'
@@ -4419,19 +4419,19 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         EObj.SetLineNo(Line)
         ctx.ExpInfo.ExpOpCount += 1
         return ctx.MObj
-    
+
     def __GetText(self, ctx):
         if ctx == None:
             return None
         else:
             return ctx.text
-        
+
     def __TransId(self, StringIdentifierToken, DefaultValue=None):
         if StringIdentifierToken == None:
             return DefaultValue
         else:
             return str(StringIdentifierToken)
-        
+
     def __TransNum(self, NumberToken, DefaultValue=0):
         if NumberToken == None:
             return DefaultValue
@@ -4443,7 +4443,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 NumberToken = int(StrToken)
         # error handle , value is too large to store
         return NumberToken
-    
+
     def __AssignQuestionKey(self, OpObj, Key):
 
         if Key == None:
@@ -4453,27 +4453,27 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             self.__CVfrQuestionDB.UpdateQuestionId(OpObj.GetQuestionId(), Key)
             OpObj.SetQuestionId(Key)
         return
-    
+
     def __ExtractOriginalText(self, ctx):
         Source = ctx.start.getTokenSource()
         InputStream = Source.inputStream
         start, stop  = ctx.start.start, ctx.stop.stop
         Text = InputStream.getText(start, stop)
         return Text.replace('\n', '')
-    
-    def __CheckDuplicateDefaultValue(self, DefaultId, Line, TokenValue): 
+
+    def __CheckDuplicateDefaultValue(self, DefaultId, Line, TokenValue):
         for i in range(0, len(self.__UsedDefaultArray)):
             if self.__UsedDefaultArray[i] == DefaultId:
                 gCVfrErrorHandle.HandleWarning(EFI_VFR_WARNING_CODE.VFR_WARNING_DEFAULT_VALUE_REDEFINED, Line, TokenValue)
-        
+
         if len(self.__UsedDefaultArray) >= EFI_IFR_MAX_DEFAULT_TYPE - 1:
             gCVfrErrorHandle.HandleError(VfrReturnCode.VFR_RETURN_FATAL_ERROR, Line, TokenValue)
-            
+
         self.__UsedDefaultArray.append(DefaultId)
 
     def __ErrorHandler(self, ReturnCode, LineNum, TokenValue=None):
         self.__ParserStatus += gCVfrErrorHandle.HandleError(ReturnCode, LineNum, TokenValue)
-    
+
     def __CompareErrorHandler(self, ReturnCode, ExpectedCode, LineNum, TokenValue=None, ErrorMsg=None):
         if ReturnCode != ExpectedCode:
             self.__ParserStatus += 1
@@ -4485,10 +4485,10 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     def GetRoot(self):
         return self.__Root
-    
+
     def GetQuestionDB(self):
         return self.__CVfrQuestionDB
-    
+
     def DumpJson(self, FileName):
         try:
             with open(FileName, 'w') as f:
@@ -4543,7 +4543,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                         f.write('      }\n')
                     else:
                         f.write('      },\n')
-                        
+
                     pVsNode = pVsNode.Next
                 f.write('  },\n')
                 f.write('  \"Data\" : [\n')
@@ -4572,17 +4572,17 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                             + ' { ' +  '{}, {}, {}, {}, {}, {}, {}, {}'.format('0x%x'%(pInfoNode.Value.ref.FormSetGuid.Data4[0]), '0x%x'%(pInfoNode.Value.ref.FormSetGuid.Data4[1]), '0x%x'%(pInfoNode.Value.ref.FormSetGuid.Data4[2]), '0x%x'%(pInfoNode.Value.ref.FormSetGuid.Data4[3]), \
                             '0x%x'%(pInfoNode.Value.ref.FormSetGuid.Data4[4]), '0x%x'%(pInfoNode.Value.ref.FormSetGuid.Data4[5]), '0x%x'%(pInfoNode.Value.ref.FormSetGuid.Data4[6]), '0x%x'%(pInfoNode.Value.ref.FormSetGuid.Data4[7])) + ' }}' + ';{}\n'.format(pInfoNode.Value.ref.DevicePath))
                         if pInfoNode.Type == EFI_IFR_TYPE_STRING:
-                            f.write('        \"Value\": \"{}\"\n'.format(pInfoNode.Value.string))    
+                            f.write('        \"Value\": \"{}\"\n'.format(pInfoNode.Value.string))
                         if pInfoNode.Type == EFI_IFR_TYPE_NUM_SIZE_8:
-                            f.write('        \"Value\": \"{}\"\n'.format(pInfoNode.Value.u8))   
+                            f.write('        \"Value\": \"{}\"\n'.format(pInfoNode.Value.u8))
                         if pInfoNode.Type == EFI_IFR_TYPE_NUM_SIZE_16:
-                            f.write('        \"Value\": \"{}\"\n'.format(pInfoNode.Value.u16))  
+                            f.write('        \"Value\": \"{}\"\n'.format(pInfoNode.Value.u16))
                         if pInfoNode.Type == EFI_IFR_TYPE_NUM_SIZE_32:
-                            f.write('        \"Value\": \"{}\"\n'.format(pInfoNode.Value.u32))  
+                            f.write('        \"Value\": \"{}\"\n'.format(pInfoNode.Value.u32))
                         if pInfoNode.Type == EFI_IFR_TYPE_NUM_SIZE_64:
-                            f.write('        \"Value\": \"{}\"\n'.format(pInfoNode.Value.u64))  
+                            f.write('        \"Value\": \"{}\"\n'.format(pInfoNode.Value.u64))
                         if pInfoNode.Type == EFI_IFR_TYPE_BOOLEAN:
-                            f.write('        \"Value\": \"{}\"\n'.format(pInfoNode.Value.b))  
+                            f.write('        \"Value\": \"{}\"\n'.format(pInfoNode.Value.b))
 
                         f.write('      },\n')
                         pInfoNode = pInfoNode.Next
@@ -4601,7 +4601,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             f.close()
         except:
             EdkLogger.error("VfrCompiler", FILE_OPEN_FAILURE, "File open failed for %s" % FileName, None)
-        
+
     def DumpYaml(self, Root, FileName):
         try:
             with open(FileName, 'w') as f:
@@ -4610,11 +4610,11 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             f.close()
         except:
             EdkLogger.error("VfrCompiler", FILE_OPEN_FAILURE, "File open failed for %s" % FileName, None)
-    
+
     def DumpYamlDfs(self, Root, f):
-        
+
         if Root.OpCode != None:
-            
+
             if Root.OpCode == EFI_IFR_FORM_SET_OP:
                 Info = Root.Data.GetInfo()
                 f.write('Formset:\n')
@@ -4627,7 +4627,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                     f.write('  ClassGuid:  {' + '{}, {}, {},'.format('0x%x'%(Guid.Data1),'0x%x'%(Guid.Data2), '0x%x'%(Guid.Data3)) \
                     + ' { ' +  '{}, {}, {}, {}, {}, {}, {}, {}'.format('0x%x'%(Guid.Data4[0]), '0x%x'%(Guid.Data4[1]), '0x%x'%(Guid.Data4[2]), '0x%x'%(Guid.Data4[3]), \
                     '0x%x'%(Guid.Data4[4]), '0x%x'%(Guid.Data4[5]), '0x%x'%(Guid.Data4[6]), '0x%x'%(Guid.Data4[7])) + ' }}\n')
-                
+
             if Root.OpCode == EFI_IFR_VARSTORE_OP:
                 Info = Root.Data.GetInfo()
                 f.write('  - varstore:\n')
@@ -4657,7 +4657,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 f.write('      guid:  {' + '{}, {}, {},'.format('0x%x'%(Info.Guid.Data1),'0x%x'%(Info.Guid.Data2), '0x%x'%(Info.Guid.Data3)) \
                     + ' { ' +  '{}, {}, {}, {}, {}, {}, {}, {}'.format('0x%x'%(Info.Guid.Data4[0]), '0x%x'%(Info.Guid.Data4[1]), '0x%x'%(Info.Guid.Data4[2]), '0x%x'%(Info.Guid.Data4[3]), \
                     '0x%x'%(Info.Guid.Data4[4]), '0x%x'%(Info.Guid.Data4[5]), '0x%x'%(Info.Guid.Data4[6]), '0x%x'%(Info.Guid.Data4[7])) + ' }}\n')
-                
+
             if Root.OpCode == EFI_IFR_FORM_OP:
                 Info = Root.Data.GetInfo()
                 f.write('  - form:\n')
@@ -4672,12 +4672,12 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 if Root.Condition != None:
                     f.write('      condition:  {}\n'.format(Root.Condition))
                 f.write('      FormId:  {}  # FormId STRING_ID\n'.format(Info.FormId))
-                for MethodMap in  MethodMapList:    
+                for MethodMap in  MethodMapList:
                     f.write('      maptitle:  {}\n'.format(MethodMap.MethodTitle))
                     f.write('      mapguid:  {' + '{}, {}, {},'.format('0x%x'%(MethodMap.MethodIdentifier.Data1),'0x%x'%(MethodMap.MethodIdentifier.Data2), '0x%x'%(MethodMap.MethodIdentifier.Data3)) \
                     + ' { ' +  '{}, {}, {}, {}, {}, {}, {}, {}'.format('0x%x'%(MethodMap.MethodIdentifier.Data4[0]), '0x%x'%(MethodMap.MethodIdentifier.Data4[1]), '0x%x'%(MethodMap.MethodIdentifier.Data4[2]), '0x%x'%(MethodMap.MethodIdentifier.Data4[3]), \
                     '0x%x'%(MethodMap.MethodIdentifier.Data4[4]), '0x%x'%(MethodMap.MethodIdentifier.Data4[5]), '0x%x'%(MethodMap.MethodIdentifier.Data4[6]), '0x%x'%(MethodMap.MethodIdentifier.Data4[7])) + ' }}\n')
-            
+
             if Root.OpCode == EFI_IFR_IMAGE_OP:
                 Info = Root.Data.GetInfo()
                 f.write('      - image:\n')
@@ -4691,7 +4691,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 if Root.Condition != None:
                     f.write('          condition:  {}\n'.format(Root.Condition))
                 f.write('          RuleId:  {} # RuleId\n'.format(Info.RuleId))
-                
+
             if Root.OpCode == EFI_IFR_SUBTITLE_OP:
                 Info = Root.Data.GetInfo()
                 f.write('      - subtitle:\n')
@@ -4707,9 +4707,9 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 f.write('          prompt:  {}  # Statement Prompt STRING_ID\n'.format(Info.Statement.Prompt))
                 f.write('          help:  {}  # Statement Help STRING_ID\n'.format(Info.Statement.Help))
                 f.write('          text:  {}  # Statement Help STRING_ID\n'.format(Info.TextTwo))
-            
+
             if Root.OpCode == EFI_IFR_ACTION_OP:
-                Info = Root.Data.GetInfo()  
+                Info = Root.Data.GetInfo()
                 f.write('      - action:\n')
                 if Root.Condition != None:
                     f.write('          condition:  {}\n'.format(Root.Condition))
@@ -4718,31 +4718,31 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 f.write('          questionid:  {}  # Question QuestionId\n'.format(Info.Question.QuestionId))
                 f.write('          varstoreid:  {}  # Question VarStoreId\n'.format(Info.Question.VarStoreId))
                 f.write('          flags:  {}  # Question Flags\n'.format(Info.Question.Flags))
-                f.write('          questionconfig:  {}  # QuestionConfig\n'.format(Info.QuestionConfig))  
+                f.write('          questionconfig:  {}  # QuestionConfig\n'.format(Info.QuestionConfig))
 
             if Root.OpCode == EFI_IFR_ONE_OF_OP:
-                Info = Root.Data.GetInfo()  
+                Info = Root.Data.GetInfo()
                 f.write('      - oneof:\n')
                 if Root.Condition != None:
                     f.write('          condition:  {}\n'.format(Root.Condition))
-                    
+
                 f.write('          prompt:  {}  # Statement Prompt STRING_ID\n'.format(Info.Question.Header.Prompt))
                 f.write('          help:  {}  # Statement Help STRING_ID\n'.format(Info.Question.Header.Help))
                 f.write('          questionid:  {}  # Question QuestionId\n'.format(Info.Question.QuestionId))
                 f.write('          varstoreid:  {}  # Question VarStoreId\n'.format(Info.Question.VarStoreId))
                 f.write('          varname:  {}  # Question VarName STRING_ID\n'.format(Info.Question.VarStoreInfo.VarName))
                 f.write('          varoffset:  {}  # Question VarOffset\n'.format(Info.Question.VarStoreInfo.VarOffset))
-                f.write('          flags:  {}  # Question Flags\n'.format(Info.Question.Flags)) 
+                f.write('          flags:  {}  # Question Flags\n'.format(Info.Question.Flags))
 
             if Root.OpCode == EFI_IFR_ONE_OF_OPTION_OP:
-                Info = Root.Data.GetInfo()  
+                Info = Root.Data.GetInfo()
                 f.write('          - option:  {}\n'.format(Info.Option))
                 if Root.Condition != None:
                     f.write('              condition:  {}\n'.format(Root.Condition))
-                    
+
                 f.write('              option flag:  {}\n'.format(Info.Flags))
                 f.write('              option type:  {}\n'.format(Info.Type))
-                
+
                 if type(Root.Data) == CIfrOneOfOption:
                     if Info.Type == EFI_IFR_TYPE_DATE:
                         f.write('              option value:  {}/{}/{}\n'.format(Info.Value.date.Year, Info.Value.date.Month, Info.Value.date.Day))
@@ -4753,54 +4753,54 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                         + ' { ' +  '{}, {}, {}, {}, {}, {}, {}, {}'.format('0x%x'%(Info.Value.ref.FormSetGuid.Data4[0]), '0x%x'%(Info.Value.ref.FormSetGuid.Data4[1]), '0x%x'%(Info.Value.ref.FormSetGuid.Data4[2]), '0x%x'%(Info.Value.ref.FormSetGuid.Data4[3]), \
                         '0x%x'%(Info.Value.ref.FormSetGuid.Data4[4]), '0x%x'%(Info.Value.ref.FormSetGuid.Data4[5]), '0x%x'%(Info.Value.ref.FormSetGuid.Data4[6]), '0x%x'%(Info.Value.ref.FormSetGuid.Data4[7])) + ' }}' + ';{}\n'.format(Info.Value.ref.DevicePath))
                     if Info.Type == EFI_IFR_TYPE_STRING:
-                        f.write('              option value:  {}\n'.format(Info.Value.string))    
+                        f.write('              option value:  {}\n'.format(Info.Value.string))
                     if Info.Type == EFI_IFR_TYPE_NUM_SIZE_8:
-                        f.write('              option value:  {}\n'.format(Info.Value.u8))   
+                        f.write('              option value:  {}\n'.format(Info.Value.u8))
                     if Info.Type == EFI_IFR_TYPE_NUM_SIZE_16:
-                        f.write('              option value:  {}\n'.format(Info.Value.u16))  
+                        f.write('              option value:  {}\n'.format(Info.Value.u16))
                     if Info.Type == EFI_IFR_TYPE_NUM_SIZE_32:
-                        f.write('              option value:  {}\n'.format(Info.Value.u32))  
+                        f.write('              option value:  {}\n'.format(Info.Value.u32))
                     if Info.Type == EFI_IFR_TYPE_NUM_SIZE_64:
-                        f.write('              option value:  {}\n'.format(Info.Value.u64))  
+                        f.write('              option value:  {}\n'.format(Info.Value.u64))
                     if Info.Type == EFI_IFR_TYPE_BOOLEAN:
-                        f.write('              option value:  {}\n'.format(Info.Value.b))  
-                        
+                        f.write('              option value:  {}\n'.format(Info.Value.b))
+
                 if type(Root.Data) == CIfrOneOfOption2:
                     f.write('              value:  {')
                     ValueType = Root.Data.GetValueType()
                     if ValueType == EFI_IFR_TYPE_STRING:
                         for i in range(0, len(Info.Value)-1):
-                            f.write('{},'.format(Info.Value[i].string))  
-                        f.write('{}'.format(Info.Value[len(Info.Value)-1].string) + '}\n') 
-                        
+                            f.write('{},'.format(Info.Value[i].string))
+                        f.write('{}'.format(Info.Value[len(Info.Value)-1].string) + '}\n')
+
                     if ValueType == EFI_IFR_TYPE_NUM_SIZE_8:
                         for i in range(0, len(Info.Value)-1):
-                            f.write('{},'.format(Info.Value[i].u8))  
-                        f.write('{}'.format(Info.Value[len(Info.Value)-1].u8) + '}\n') 
-                        
+                            f.write('{},'.format(Info.Value[i].u8))
+                        f.write('{}'.format(Info.Value[len(Info.Value)-1].u8) + '}\n')
+
                     if ValueType == EFI_IFR_TYPE_NUM_SIZE_16:
                         for i in range(0, len(Info.Value)-1):
-                            f.write('{},'.format(Info.Value[i].u16))  
-                        f.write('{}'.format(Info.Value[len(Info.Value)-1].u16) + '}\n') 
-                        
+                            f.write('{},'.format(Info.Value[i].u16))
+                        f.write('{}'.format(Info.Value[len(Info.Value)-1].u16) + '}\n')
+
                     if ValueType == EFI_IFR_TYPE_NUM_SIZE_32:
                         for i in range(0, len(Info.Value)-1):
-                            f.write('{},'.format(Info.Value[i].u32))  
-                        f.write('{}'.format(Info.Value[len(Info.Value)-1].u32) + '}\n') 
-                        
+                            f.write('{},'.format(Info.Value[i].u32))
+                        f.write('{}'.format(Info.Value[len(Info.Value)-1].u32) + '}\n')
+
                     if ValueType == EFI_IFR_TYPE_NUM_SIZE_64:
                         for i in range(0, len(Info.Value)-1):
-                            f.write('{},'.format(Info.Value[i].u64))  
-                        f.write('{}'.format(Info.Value[len(Info.Value)-1].u64) + '}\n') 
-                        
+                            f.write('{},'.format(Info.Value[i].u64))
+                        f.write('{}'.format(Info.Value[len(Info.Value)-1].u64) + '}\n')
+
                     if ValueType == EFI_IFR_TYPE_BOOLEAN:
                         for i in range(0, len(Info.Value)-1):
-                            f.write('{},'.format(Info.Value[i].b))  
-                        f.write('{}'.format(Info.Value[len(Info.Value)-1].b) + '}\n') 
-                    
+                            f.write('{},'.format(Info.Value[i].b))
+                        f.write('{}'.format(Info.Value[len(Info.Value)-1].b) + '}\n')
+
 
             if Root.OpCode == EFI_IFR_DEFAULT_OP:
-                Info = Root.Data.GetInfo()  
+                Info = Root.Data.GetInfo()
                 f.write('          - default:\n')
                 if Root.Condition != None:
                     f.write('              condition:  {}\n'.format(Root.Condition))
@@ -4816,77 +4816,77 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                         + ' { ' +  '{}, {}, {}, {}, {}, {}, {}, {}'.format('0x%x'%(Info.Value.ref.FormSetGuid.Data4[0]), '0x%x'%(Info.Value.ref.FormSetGuid.Data4[1]), '0x%x'%(Info.Value.ref.FormSetGuid.Data4[2]), '0x%x'%(Info.Value.ref.FormSetGuid.Data4[3]), \
                         '0x%x'%(Info.Value.ref.FormSetGuid.Data4[4]), '0x%x'%(Info.Value.ref.FormSetGuid.Data4[5]), '0x%x'%(Info.Value.ref.FormSetGuid.Data4[6]), '0x%x'%(Info.Value.ref.FormSetGuid.Data4[7])) + ' }}' + ';{}\n'.format(Info.Value.ref.DevicePath))
                     if Info.Type == EFI_IFR_TYPE_STRING:
-                        f.write('              value:  {}\n'.format(Info.Value.string))    
+                        f.write('              value:  {}\n'.format(Info.Value.string))
                     if Info.Type == EFI_IFR_TYPE_NUM_SIZE_8:
-                        f.write('              value:  {}\n'.format(Info.Value.u8))   
+                        f.write('              value:  {}\n'.format(Info.Value.u8))
                     if Info.Type == EFI_IFR_TYPE_NUM_SIZE_16:
-                        f.write('              value:  {}\n'.format(Info.Value.u16))  
+                        f.write('              value:  {}\n'.format(Info.Value.u16))
                     if Info.Type == EFI_IFR_TYPE_NUM_SIZE_32:
-                        f.write('              value:  {}\n'.format(Info.Value.u32))  
+                        f.write('              value:  {}\n'.format(Info.Value.u32))
                     if Info.Type == EFI_IFR_TYPE_NUM_SIZE_64:
-                        f.write('              value:  {}\n'.format(Info.Value.u64))  
+                        f.write('              value:  {}\n'.format(Info.Value.u64))
                     if Info.Type == EFI_IFR_TYPE_BOOLEAN:
-                        f.write('              value:  {}\n'.format(Info.Value.b))  
-                    
+                        f.write('              value:  {}\n'.format(Info.Value.b))
+
                 if type(Root.Data) == CIfrDefault3:
                     f.write('              value:  {')
                     ValueType = Root.Data.GetValueType()
                     if ValueType == EFI_IFR_TYPE_STRING:
                         for i in range(0, len(Info.Value)-1):
-                            f.write('{},'.format(Info.Value[i].string))  
-                        f.write('{}'.format(Info.Value[len(Info.Value)-1].string) + '}\n') 
-                        
+                            f.write('{},'.format(Info.Value[i].string))
+                        f.write('{}'.format(Info.Value[len(Info.Value)-1].string) + '}\n')
+
                     if ValueType == EFI_IFR_TYPE_NUM_SIZE_8:
                         for i in range(0, len(Info.Value)-1):
-                            f.write('{},'.format(Info.Value[i].u8))  
-                        f.write('{}'.format(Info.Value[len(Info.Value)-1].u8) + '}\n') 
-                        
+                            f.write('{},'.format(Info.Value[i].u8))
+                        f.write('{}'.format(Info.Value[len(Info.Value)-1].u8) + '}\n')
+
                     if ValueType == EFI_IFR_TYPE_NUM_SIZE_16:
                         for i in range(0, len(Info.Value)-1):
-                            f.write('{},'.format(Info.Value[i].u16))  
-                        f.write('{}'.format(Info.Value[len(Info.Value)-1].u16) + '}\n') 
-                        
+                            f.write('{},'.format(Info.Value[i].u16))
+                        f.write('{}'.format(Info.Value[len(Info.Value)-1].u16) + '}\n')
+
                     if ValueType == EFI_IFR_TYPE_NUM_SIZE_32:
                         for i in range(0, len(Info.Value)-1):
-                            f.write('{},'.format(Info.Value[i].u32))  
-                        f.write('{}'.format(Info.Value[len(Info.Value)-1].u32) + '}\n') 
-                        
+                            f.write('{},'.format(Info.Value[i].u32))
+                        f.write('{}'.format(Info.Value[len(Info.Value)-1].u32) + '}\n')
+
                     if ValueType == EFI_IFR_TYPE_NUM_SIZE_64:
                         for i in range(0, len(Info.Value)-1):
-                            f.write('{},'.format(Info.Value[i].u64))  
-                        f.write('{}'.format(Info.Value[len(Info.Value)-1].u64) + '}\n') 
-                        
+                            f.write('{},'.format(Info.Value[i].u64))
+                        f.write('{}'.format(Info.Value[len(Info.Value)-1].u64) + '}\n')
+
                     if ValueType == EFI_IFR_TYPE_BOOLEAN:
                         for i in range(0, len(Info.Value)-1):
-                            f.write('{},'.format(Info.Value[i].b))  
-                        f.write('{}'.format(Info.Value[len(Info.Value)-1].b) + '}\n') 
+                            f.write('{},'.format(Info.Value[i].b))
+                        f.write('{}'.format(Info.Value[len(Info.Value)-1].b) + '}\n')
 
             if Root.OpCode == EFI_IFR_ORDERED_LIST_OP:
-                Info = Root.Data.GetInfo()  
+                Info = Root.Data.GetInfo()
                 f.write('      - orderedlist:\n')
                 if Root.Condition != None:
                     f.write('          condition:  {}\n'.format(Root.Condition))
-                    
+
                 f.write('          prompt:  {}  # Statement Prompt STRING_ID\n'.format(Info.Question.Header.Prompt))
                 f.write('          help:  {}  # Statement Help STRING_ID\n'.format(Info.Question.Header.Help))
                 f.write('          questionid:  {}  # Question QuestionId\n'.format(Info.Question.QuestionId))
                 f.write('          varstoreid:  {}  # Question VarStoreId\n'.format(Info.Question.VarStoreId))
                 f.write('          maxContainers:  {}\n'.format(Info.MaxContainers))
-                f.write('          flags:  {}\n'.format(Info.Question.Flags)) 
+                f.write('          flags:  {}\n'.format(Info.Question.Flags))
 
             if Root.OpCode == EFI_IFR_NUMERIC_OP:
-                Info = Root.Data.GetInfo()  
+                Info = Root.Data.GetInfo()
                 f.write('      - numeric:\n')
                 if Root.Condition != None:
-                    f.write('          condition:  {}\n'.format(Root.Condition))    
+                    f.write('          condition:  {}\n'.format(Root.Condition))
                 f.write('          prompt:  {}  # Statement Prompt STRING_ID\n'.format(Info.Question.Header.Prompt))
                 f.write('          help:  {}  # Statement Help STRING_ID\n'.format(Info.Question.Header.Help))
                 f.write('          questionid:  {}  # Question QuestionId\n'.format(Info.Question.QuestionId))
                 f.write('          varstoreid:  {}  # Question VarStoreId\n'.format(Info.Question.VarStoreId))
                 f.write('          varname:  {}  # Question VarName STRING_ID\n'.format(Info.Question.VarStoreInfo.VarName))
                 f.write('          varoffset:  {}  # Question VarOffset\n'.format(Info.Question.VarStoreInfo.VarOffset))
-                f.write('          flags:  {}  # Question Flags\n'.format(Info.Question.Flags)) 
-                
+                f.write('          flags:  {}  # Question Flags\n'.format(Info.Question.Flags))
+
                 if Root.Data.GetVarType() == EFI_IFR_TYPE_NUM_SIZE_64:
                     f.write('          maxvalue:  {}\n'.format(Info.Data.u64.MaxValue))
                     f.write('          minvalue:  {}\n'.format(Info.Data.u64.MinValue))
@@ -4896,19 +4896,19 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                     f.write('          maxvalue:  {}\n'.format(Info.Data.u32.MaxValue))
                     f.write('          minvalue:  {}\n'.format(Info.Data.u32.MinValue))
                     f.write('          step:  {}\n'.format(Info.Data.u32.Step))
-                    
+
                 if Root.Data.GetVarType() == EFI_IFR_TYPE_NUM_SIZE_16:
                     f.write('          maxvalue:  {}\n'.format(Info.Data.u16.MaxValue))
                     f.write('          minvalue:  {}\n'.format(Info.Data.u16.MinValue))
                     f.write('          step:  {}\n'.format(Info.Data.u16.Step))
-                    
+
                 if Root.Data.GetVarType() == EFI_IFR_TYPE_NUM_SIZE_8:
                     f.write('          maxvalue:  {}\n'.format(Info.Data.u8.MaxValue))
                     f.write('          minvalue:  {}\n'.format(Info.Data.u8.MinValue))
                     f.write('          step:  {}\n'.format(Info.Data.u8.Step))
 
             if Root.OpCode == EFI_IFR_CHECKBOX_OP:
-                Info = Root.Data.GetInfo()  
+                Info = Root.Data.GetInfo()
                 f.write('      - checkbox:\n')
                 if Root.Condition != None:
                     f.write('          condition:  {}\n'.format(Root.Condition))
@@ -4918,10 +4918,10 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 f.write('          varstoreid:  {}  # Question VarStoreId\n'.format(Info.Question.VarStoreId))
                 f.write('          varname:  {}  # Question VarName STRING_ID\n'.format(Info.Question.VarStoreInfo.VarName))
                 f.write('          varoffset:  {}  # Question VarOffset\n'.format(Info.Question.VarStoreInfo.VarOffset))
-                f.write('          flags:  {}  # Flags\n'.format(Info.Flags)) 
+                f.write('          flags:  {}  # Flags\n'.format(Info.Flags))
 
             if Root.OpCode == EFI_IFR_TIME_OP:
-                Info = Root.Data.GetInfo()  
+                Info = Root.Data.GetInfo()
                 f.write('      - time:\n')
                 if Root.Condition != None:
                     f.write('          condition:  {}\n'.format(Root.Condition))
@@ -4931,10 +4931,10 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 f.write('          varoffset:  {}\n'.format(Info.Question.VarStoreInfo.VarOffset))
                 f.write('          prompt:  {}  # Statement Prompt STRING_ID\n'.format(Info.Question.Header.Prompt))
                 f.write('          help:  {}  # Statement Help STRING_ID\n'.format(Info.Question.Header.Help))
-                f.write('          flags:  {}\n'.format(Info.Flags)) 
+                f.write('          flags:  {}\n'.format(Info.Flags))
 
             if Root.OpCode == EFI_IFR_DATE_OP:
-                Info = Root.Data.GetInfo()  
+                Info = Root.Data.GetInfo()
                 f.write('      - date:\n')
                 if Root.Condition != None:
                     f.write('          condition:  {}\n'.format(Root.Condition))
@@ -4944,11 +4944,11 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 f.write('          varoffset:  {}\n'.format(Info.Question.VarStoreInfo.VarOffset))
                 f.write('          prompt:  {}  # Statement Prompt STRING_ID\n'.format(Info.Question.Header.Prompt))
                 f.write('          help:  {}  # Statement Help STRING_ID\n'.format(Info.Question.Header.Help))
-                f.write('          flags:  {}\n'.format(Info.Flags)) 
-                
-            
+                f.write('          flags:  {}\n'.format(Info.Flags))
+
+
             if Root.OpCode == EFI_IFR_STRING_OP:
-                Info = Root.Data.GetInfo()  
+                Info = Root.Data.GetInfo()
                 f.write('      - string:\n')
                 if Root.Condition != None:
                     f.write('          condition:  {}\n'.format(Root.Condition))
@@ -4958,13 +4958,13 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 f.write('          varstoreid:  {}  # Question VarStoreId\n'.format(Info.Question.VarStoreId))
                 f.write('          varname:  {}  # Question VarName STRING_ID\n'.format(Info.Question.VarStoreInfo.VarName))
                 f.write('          varoffset:  {}  # Question VarOffset\n'.format(Info.Question.VarStoreInfo.VarOffset))
-                f.write('          flags:  {}  # Question Flags\n'.format(Info.Question.Flags)) 
-                f.write('          stringflags:  {}\n'.format(Info.Flags)) 
-                f.write('          stringminsize:  {}\n'.format(Info.MinSize)) 
-                f.write('          stringmaxsize:  {}\n'.format(Info.MaxSize)) 
+                f.write('          flags:  {}  # Question Flags\n'.format(Info.Question.Flags))
+                f.write('          stringflags:  {}\n'.format(Info.Flags))
+                f.write('          stringminsize:  {}\n'.format(Info.MinSize))
+                f.write('          stringmaxsize:  {}\n'.format(Info.MaxSize))
 
             if Root.OpCode == EFI_IFR_PASSWORD_OP:
-                Info = Root.Data.GetInfo()  
+                Info = Root.Data.GetInfo()
                 f.write('      - password:\n')
                 if Root.Condition != None:
                     f.write('          condition:  {}\n'.format(Root.Condition))
@@ -4974,13 +4974,13 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 f.write('          varstoreid:  {}  # Question VarStoreId\n'.format(Info.Question.VarStoreId))
                 f.write('          varname:  {}  # Question VarName STRING_ID\n'.format(Info.Question.VarStoreInfo.VarName))
                 f.write('          varoffset:  {}  # Question VarOffset\n'.format(Info.Question.VarStoreInfo.VarOffset))
-                f.write('          flags:  {}  # Question Flags\n'.format(Info.Question.Flags)) 
-                f.write('          minsize:  {}\n'.format(Info.MinSize)) 
-                f.write('          maxsize:  {}\n'.format(Info.MaxSize)) 
-            
-                
+                f.write('          flags:  {}  # Question Flags\n'.format(Info.Question.Flags))
+                f.write('          minsize:  {}\n'.format(Info.MinSize))
+                f.write('          maxsize:  {}\n'.format(Info.MaxSize))
+
+
             if Root.OpCode == EFI_IFR_RESET_BUTTON_OP:
-                Info = Root.Data.GetInfo()  
+                Info = Root.Data.GetInfo()
                 f.write('      - resetbutton:\n')
                 if Root.Condition != None:
                     f.write('          condition:  {}\n'.format(Root.Condition))
@@ -4989,11 +4989,11 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 f.write('          defaultid:  {}\n'.format(Info.DefaultId))
 
             if Root.OpCode == EFI_IFR_REF_OP:
-                Info = Root.Data.GetInfo()  
+                Info = Root.Data.GetInfo()
                 f.write('      - goto:\n')
                 if Root.Condition != None:
                     f.write('          condition:  {}\n'.format(Root.Condition))
-                
+
                 if type(Root.Data) == CIfrRef4:
                     f.write('          formid:  {}\n'.format(Info.FormId))
                     f.write('          formsetid:  {' + '{}, {}, {},'.format('0x%x'%(Info.FormSetId.Data1),'0x%x'%(Info.FormSetId.Data2), '0x%x'%(Info.FormSetId.Data3)) \
@@ -5017,25 +5017,25 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                     f.write('          formid:  {}\n'.format(Info.FormId))
                     f.write('          questionid:  {}\n'.format(Info.Question.QuestionId))
 
-                f.write('          prompt:  {}\n'.format(Info.Question.Header.Prompt)) 
-                f.write('          help:  {}\n'.format(Info.Question.Header.Help)) 
-            
+                f.write('          prompt:  {}\n'.format(Info.Question.Header.Prompt))
+                f.write('          help:  {}\n'.format(Info.Question.Header.Help))
+
             if Root.OpCode == EFI_IFR_REFRESH_OP:
-                Info = Root.Data.GetInfo() 
+                Info = Root.Data.GetInfo()
                 f.write('          - refresh:\n')
                 if Root.Condition != None:
                     f.write('              condition:  {}\n'.format(Root.Condition))
                 f.write('              interval:  {}  # RefreshInterval\n'.format(Info.RefreshInterval))
 
             if Root.OpCode == EFI_IFR_VARSTORE_DEVICE_OP:
-                Info = Root.Data.GetInfo() 
+                Info = Root.Data.GetInfo()
                 f.write('          - varstoredevice:\n')
                 if Root.Condition != None:
                     f.write('              condition:  {}\n'.format(Root.Condition))
                 f.write('              devicepath:  {}  # DevicePath\n'.format(Info.DevicePath))
 
             if Root.OpCode == EFI_IFR_REFRESH_ID_OP:
-                Info = Root.Data.GetInfo() 
+                Info = Root.Data.GetInfo()
                 f.write('          - refreshguid:\n')
                 if Root.Condition != None:
                     f.write('              condition:  {}\n'.format(Root.Condition))
@@ -5044,44 +5044,44 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                     '0x%x'%(Info.RefreshEventGroupId.Data4[4]), '0x%x'%(Info.RefreshEventGroupId.Data4[5]), '0x%x'%(Info.RefreshEventGroupId.Data4[6]), '0x%x'%(Info.RefreshEventGroupId.Data4[7])) + ' }}\n')
 
             if Root.OpCode == EFI_IFR_WARNING_IF_OP:
-                Info = Root.Data.GetInfo() 
+                Info = Root.Data.GetInfo()
                 f.write('          - warningif:\n')
                 if Root.Condition != None:
                     f.write('              condition:  {}\n'.format(Root.Condition))
                 f.write('              warning:  {}\n'.format(Info.Warning))
                 f.write('              timeOut:  {}\n'.format(Info.TimeOut))
-                      
+
             if Root.OpCode == EFI_IFR_GUID_OP:
-                Info = Root.Data.GetInfo() 
+                Info = Root.Data.GetInfo()
                 if type(Root.Data) == CIfrLabel: # type(Info) == EFI_IFR_GUID_LABEL
                     f.write('      - label:\n')
                     if Root.Condition != None:
                         f.write('          condition:  {}\n'.format(Root.Condition))
-                        
+
                     f.write('          labelnumber:  {}  # LabelNumber\n'.format(Info.Number))
 
-                if type(Root.Data) == CIfrBanner: 
+                if type(Root.Data) == CIfrBanner:
                     f.write('      - banner:\n')
                     if Root.Condition != None:
                         f.write('          condition:  {}\n'.format(Root.Condition))
-                        
+
                     f.write('          title:  {}\n'.format(Info.Title))
                     f.write('          linenumber:  {}\n'.format(Info.LineNumber))
                     f.write('          align:  {}\n'.format(Info.Alignment))
 
-                if type(Root.Data) == CIfrTimeout: 
+                if type(Root.Data) == CIfrTimeout:
                     f.write('      - banner:\n')
                     if Root.Condition != None:
                         f.write('          condition:  {}\n'.format(Root.Condition))
-                        
+
                     f.write('          timeout:  {}\n'.format(Info.TimeOut))
 
-                if type(Root.Data) == CIfrClass:                         
+                if type(Root.Data) == CIfrClass:
                     f.write('  Class:  {}\n'.format(Info.Class))
-                    
-                if type(Root.Data) == CIfrSubClass:                         
+
+                if type(Root.Data) == CIfrSubClass:
                     f.write('  SubClass:  {}\n'.format(Info.SubClass))
-                
+
                 if type(Root.Data) == CIfrGuid:
                     f.write('      - guidop:\n')
                     if Root.Condition != None:
@@ -5089,7 +5089,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                     f.write('          guid:  {' + '{}, {}, {},'.format('0x%x'%(Info.Guid.Data1),'0x%x'%(Info.Guid.Data2), '0x%x'%(Info.Guid.Data3)) \
                     + ' { ' +  '{}, {}, {}, {}, {}, {}, {}, {}'.format('0x%x'%(Info.Guid.Data4[0]), '0x%x'%(Info.Guid.Data4[1]), '0x%x'%(Info.Guid.Data4[2]), '0x%x'%(Info.Guid.Data4[3]), \
                     '0x%x'%(Info.Guid.Data4[4]), '0x%x'%(Info.Guid.Data4[5]), '0x%x'%(Info.Guid.Data4[6]), '0x%x'%(Info.Guid.Data4[7])) + ' }}\n')
-                    
+
 
         if Root.Child != []:
             for ChildNode in Root.Child:
@@ -5100,7 +5100,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                         ChildNode.Condition = Root.Condition
 
                 self.DumpYamlDfs(ChildNode, f)
-        
-        return 
-    
+
+        return
+
 del VfrSyntaxParser

@@ -1,14 +1,14 @@
-from CommonCtypes import *   
+from CommonCtypes import *
 from VfrFormPkg import *
 
 # Ifr related Info -> ctypes obj
 #　conditional Info
 # Structure Info
-        
-        
+
+
 class VfrTreeNode():
     def __init__(self, Opcode: int=None) -> None:
-        
+
         self.OpCode = Opcode
         self.Data = None # save class or bytes
         self.Condition = None
@@ -16,19 +16,19 @@ class VfrTreeNode():
         self.Parent = None
         self.Child = []
 
-    
+
     def hasCondition(self) ->bool:
         if self.Condition == None:
             return False
         else:
             return True
-    
+
     # Get data from ctypes to bytes.
     def struct2stream(self, s) -> bytes:
         length = sizeof(s)
         p = cast(pointer(s), POINTER(c_char * length))
         return p.contents.raw
-        
+
     def hasChild(self) -> bool:
         if self.Child == []:
             return False
@@ -41,7 +41,7 @@ class VfrTreeNode():
             if ParTree.Child[-1] == self:
                 return True
         return False
-        
+
 
     def insertChild(self, NewNode, pos: int=None) -> None:
         if len(self.Child) == 0:
@@ -52,9 +52,9 @@ class VfrTreeNode():
                 self.Child.append(NewNode)
             else:
                 self.Child.insert(pos, NewNode)
-                
+
         NewNode.Parent = self
-                    
+
 
     # lastNode.insertRel(newNode)
     def insertRel(self, newNode) -> None:
@@ -64,7 +64,7 @@ class VfrTreeNode():
             parentTree.Child.insert(new_index, newNode)
         self.NextRel = newNode
         newNode.LastRel = self
-        
+
 
     def deleteNode(self, deletekey: str) -> None:
         FindStatus, DeleteTree = self.FindNode(deletekey)
@@ -86,5 +86,3 @@ class VfrTreeNode():
         else:
             print('Could not find the target tree')
             return None
-        
-    
