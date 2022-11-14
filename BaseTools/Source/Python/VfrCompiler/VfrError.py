@@ -2,11 +2,13 @@ import imp
 import sys
 import os
 from enum import Enum
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Common.BuildToolError import *
 import Common.EdkLogger as EdkLogger
 
-class VfrReturnCode(Enum) :
+
+class VfrReturnCode(Enum):
     VFR_RETURN_SUCCESS = 0
     VFR_RETURN_ERROR_SKIPED = 1
     VFR_RETURN_FATAL_ERROR = 2
@@ -47,10 +49,13 @@ vfrErrorMessage = {
     VfrReturnCode.VFR_RETURN_UNSUPPORTED: 'unsupported',
     VfrReturnCode.VFR_RETURN_REDEFINED: 'already defined',
     VfrReturnCode.VFR_RETURN_FORMID_REDEFINED: 'form id already defined',
-    VfrReturnCode.VFR_RETURN_QUESTIONID_REDEFINED: 'question id already defined',
-    VfrReturnCode.VFR_RETURN_VARSTOREID_REDEFINED: 'varstore id already defined',
+    VfrReturnCode.VFR_RETURN_QUESTIONID_REDEFINED:
+    'question id already defined',
+    VfrReturnCode.VFR_RETURN_VARSTOREID_REDEFINED:
+    'varstore id already defined',
     VfrReturnCode.VFR_RETURN_UNDEFINED: 'undefined',
-    VfrReturnCode.VFR_RETURN_VAR_NOTDEFINED_BY_QUESTION: 'some variable has not defined by a question',
+    VfrReturnCode.VFR_RETURN_VAR_NOTDEFINED_BY_QUESTION:
+    'some variable has not defined by a question',
     VfrReturnCode.VFR_RETURN_VARSTORE_DATATYPE_REDEFINED_ERROR:
     'Data Structure is defined by more than one varstores: it can\'t be referred as varstore: only varstore name could be used.',
     VfrReturnCode.VFR_RETURN_GET_EFIVARSTORE_ERROR: 'get efi varstore error',
@@ -80,7 +85,8 @@ vfrErrorMessage = {
     VfrReturnCode.VFR_RETURN_CODEUNDEFINED: 'undefined Error Code'
 }
 
-class EFI_VFR_WARNING_CODE(Enum) :
+
+class EFI_VFR_WARNING_CODE(Enum):
     VFR_WARNING_DEFAULT_VALUE_REDEFINED = 0
     VFR_WARNING_ACTION_WITH_TEXT_TWO = 1
     VFR_WARNING_OBSOLETED_FRAMEWORK_OPCODE = 2
@@ -96,7 +102,6 @@ vfrWarningMessage = {
     ": Not recommend to use obsoleted framework opcode",
     EFI_VFR_WARNING_CODE.VFR_WARNING_CODEUNDEFINED: ": undefined Warning Code"
 }
-
 
 
 class CVfrErrorHandle():
@@ -123,16 +128,22 @@ class CVfrErrorHandle():
                 break
         if WarningMsg != '':
             if self.__WarningAsError:
-                EdkLogger.error('VfrCompiler', WarningCode, WarningMsg, self.__InputFileName, LineNum, "warning treated as error")
-            EdkLogger.warn('VfrCompiler', WarningMsg, self.__InputFileName, LineNum, TokenValue)
+                EdkLogger.error('VfrCompiler', WarningCode, WarningMsg,
+                                self.__InputFileName, LineNum,
+                                "warning treated as error")
+            EdkLogger.warn('VfrCompiler', WarningMsg, self.__InputFileName,
+                           LineNum, TokenValue)
 
-
-    def PrintMsg(self, LineNum, MsgType = 'Error', ErrorMsg=None, TokenValue=None):
+    def PrintMsg(self,
+                 LineNum,
+                 MsgType='Error',
+                 ErrorMsg=None,
+                 TokenValue=None):
         if MsgType == 'Warning':
             EdkLogger.verbose(ErrorMsg)
         else:
-            EdkLogger.error('VfrCompiler', 0x3000, ErrorMsg, self.__InputFileName, LineNum, TokenValue)
-
+            EdkLogger.error('VfrCompiler', 0x3000, ErrorMsg,
+                            self.__InputFileName, LineNum, TokenValue)
 
     def HandleError(self, ErrorCode, LineNum=None, TokenValue=None):
         if self.__vfrErrorMessage == None:
@@ -143,9 +154,11 @@ class CVfrErrorHandle():
                 ErrorMsg = self.__vfrErrorMessage[key]
                 break
         if ErrorMsg != '':
-            EdkLogger.error('VfrCompiler', ErrorCode, ErrorMsg, self.__InputFileName, LineNum, TokenValue)
+            EdkLogger.error('VfrCompiler', ErrorCode, ErrorMsg,
+                            self.__InputFileName, LineNum, TokenValue)
             return 1
         else:
             return 0
+
 
 gCVfrErrorHandle = CVfrErrorHandle()
