@@ -2,15 +2,15 @@
 # encoding: utf-8
 from antlr4 import *
 from io import StringIO
-from typing.io import TextIO
+from typing import TextIO
 import sys
 
 
 
-from CommonCtypes import *
-from VfrFormPkg import *
-from VfrUtility import *
-from VfrTree import *
+from VfrCompiler.CommonCtypes import *
+from VfrCompiler.VfrFormPkg import *
+from VfrCompiler.VfrUtility import *
+from VfrCompiler.VfrTree import *
 
 
 def serializedATN():

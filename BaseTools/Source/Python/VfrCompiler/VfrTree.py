@@ -1,5 +1,5 @@
-from CommonCtypes import *
-from VfrFormPkg import *
+from VfrCompiler.CommonCtypes import *
+from VfrCompiler.VfrFormPkg import *
 
 # Ifr related Info -> ctypes obj
 #　conditional Info

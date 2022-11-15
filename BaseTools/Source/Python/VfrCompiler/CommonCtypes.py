@@ -3,7 +3,7 @@ from re import A, X
 from telnetlib import X3PAD
 from tkinter import YView
 import uuid
-from VfrError import *
+from VfrCompiler.VfrError import *
 from struct import *
 
 EFI_STRING_ID_INVALID = 0x0

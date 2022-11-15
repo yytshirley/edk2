@@ -3,10 +3,10 @@ from pickletools import uint8
 import sys
 from tkinter.ttk import Treeview
 from antlr4 import*
-from VfrSyntaxLexer import VfrSyntaxLexer
-from VfrSyntaxParser import VfrSyntaxParser
-from VfrSyntaxVisitor import VfrSyntaxVisitor
-from VfrError import *
+from VfrCompiler.VfrSyntaxLexer import VfrSyntaxLexer
+from VfrCompiler.VfrSyntaxParser import VfrSyntaxParser
+from VfrCompiler.VfrSyntaxVisitor import VfrSyntaxVisitor
+from VfrCompiler.VfrError import *
 
 def VfrParse(Infile, YamlOutFile, JsonOutFile):
     gCVfrErrorHandle.SetInputFile (Infile)

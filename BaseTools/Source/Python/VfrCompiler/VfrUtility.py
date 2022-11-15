@@ -7,8 +7,8 @@ from turtle import goto
 from typing import List
 from unittest.mock import NonCallableMagicMock
 from xmlrpc.client import boolean
-from VfrError import *
-from CommonCtypes import *
+from VfrCompiler.VfrError import *
+from VfrCompiler.CommonCtypes import *
 from abc import ABCMeta, abstractmethod
 import ctypes
 

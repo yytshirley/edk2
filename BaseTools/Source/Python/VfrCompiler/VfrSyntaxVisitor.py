@@ -10,10 +10,10 @@ from re import T
 from sre_parse import FLAGS
 from tokenize import Number
 from antlr4 import *
-from CommonCtypes import *
-from VfrFormPkg import *
-from VfrUtility import *
-from VfrTree import *
+from VfrCompiler.CommonCtypes import *
+from VfrCompiler.VfrFormPkg import *
+from VfrCompiler.VfrUtility import *
+from VfrCompiler.VfrTree import *
 import ctypes
 import struct
 
