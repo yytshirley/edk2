@@ -1879,10 +1879,10 @@ StringIdentifier
     :   [A-Za-z_][A-Za-z_0-9]*
     ;
 
-ComplexDefine
-    :   '#' Whitespace? 'define'  ~[#\r\n]*
-        -> skip
-    ;
+// ComplexDefine
+//     :   '#' Whitespace? 'define'  ~[#\r\n]*
+//         -> skip
+//     ;
 
 LineDefinition
     :   '#' Whitespace? 'line'  ~[#\r\n]*
@@ -1915,11 +1915,6 @@ GuidDefinition
         ->skip
     ;
 
-DefineLine
-    :   '#' Whitespace? 'define'  .* [\r\n] Whitespace? '{' ~[\r\n]*
-        ->skip
-    ;
-
 Comment
     :   '/*' .*? '*/'
         -> skip
@@ -1930,6 +1925,10 @@ Newline
         |   '\n'
         )
         -> skip
+    ;
+
+DefLine
+    :   '#' Whitespace? 'define' ~[#\\\r\n]* ('\\' '\r'? '\n' ~[#\\\r\n]*)* -> skip
     ;
 
 LineComment

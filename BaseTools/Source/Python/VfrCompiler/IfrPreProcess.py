@@ -16,6 +16,7 @@ class Options:
         self.LanuchYamlCompiler = False
 
         self.ModuleName = None
+        self.Workspace = None
         self.InputFileName = None
         self.BaseFileName = None
         self.IncludePaths = []
@@ -136,8 +137,8 @@ class PreProcessDB:
                 if i != len(Items) - 1:
                     NewValue += " | "
             return NewValue
-        else:
-            EdkLogger.error("VfrCompiler", PARAMETER_INVALID, "Invalid parameter:  %s" % Key, None)
+        # else:
+        #     EdkLogger.error("VfrCompiler", PARAMETER_INVALID, "Invalid parameter:  %s" % Key, None)
 
     def _ExtractHeaderFiles(self):
         FileName = self.Options.InputFileName

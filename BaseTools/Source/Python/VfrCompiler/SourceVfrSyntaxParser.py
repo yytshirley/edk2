@@ -2,7 +2,7 @@
 # encoding: utf-8
 from antlr4 import *
 from io import StringIO
-from typing import TextIO
+from typing.io import TextIO
 import sys
 
 
@@ -16,7 +16,7 @@ from VfrCompiler.IfrPreProcess import *
 
 def serializedATN():
     with StringIO() as buf:
-        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\u0106")
+        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\u0105")
         buf.write("\u0c2f\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7")
         buf.write("\4\b\t\b\4\t\t\t\4\n\t\n\4\13\t\13\4\f\t\f\4\r\t\r\4\16")
         buf.write("\t\16\4\17\t\17\4\20\t\20\4\21\t\21\4\22\t\22\4\23\t\23")
@@ -1814,10 +1814,10 @@ class SourceVfrSyntaxParser ( Parser ):
                       "NumericSizeOne", "NumericSizeTwo", "NumericSizeFour",
                       "NumericSizeEight", "DisPlayIntDec", "DisPlayUIntDec",
                       "DisPlayUIntHex", "Insensitive", "Sensitive", "LastNonMatch",
-                      "FirstNonMatch", "Number", "StringIdentifier", "ComplexDefine",
-                      "LineDefinition", "IncludeDefinition", "Whitespace",
-                      "GuidSubDefinition", "GuidDefinition", "DefineLine",
-                      "Comment", "Newline", "LineComment", "Extern" ]
+                      "FirstNonMatch", "Number", "StringIdentifier", "LineDefinition",
+                      "IncludeDefinition", "Whitespace", "GuidSubDefinition",
+                      "GuidDefinition", "Comment", "Newline", "DefLine",
+                      "LineComment", "Extern" ]
 
     RULE_vfrProgram = 0
     RULE_vfrHeader = 1
@@ -2343,17 +2343,16 @@ class SourceVfrSyntaxParser ( Parser ):
     FirstNonMatch=247
     Number=248
     StringIdentifier=249
-    ComplexDefine=250
-    LineDefinition=251
-    IncludeDefinition=252
-    Whitespace=253
-    GuidSubDefinition=254
-    GuidDefinition=255
-    DefineLine=256
-    Comment=257
-    Newline=258
-    LineComment=259
-    Extern=260
+    LineDefinition=250
+    IncludeDefinition=251
+    Whitespace=252
+    GuidSubDefinition=253
+    GuidDefinition=254
+    Comment=255
+    Newline=256
+    DefLine=257
+    LineComment=258
+    Extern=259
 
     def __init__(self, input:TokenStream, output:TextIO = sys.stdout):
         super().__init__(input, output)
@@ -21530,3 +21529,8 @@ class SourceVfrSyntaxParser ( Parser ):
         finally:
             self.exitRule()
         return localctx
+
+
+
+
+

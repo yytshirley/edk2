@@ -86,7 +86,8 @@ parser.add_argument("-l", dest="CreateRecordListFile", help="create an output IF
 parser.add_argument("-c", dest="CreateYamlFile", help="create Yaml file")
 parser.add_argument("-j", dest="CreateJsonFile", help="create Json file")
 # parser.add_argument("-c", dest ="LanuchYamlCompiler",help = "lanuch yaml compiler")
-parser.add_argument("-i", dest="IncludePaths", nargs="+", help="add path argument")  #
+# parser.add_argument("-i", dest="IncludePaths", nargs="+", help="add path argument")  #
+parser.add_argument("-w", dest="Workspace", help="workspace")
 parser.add_argument(
     "-o",
     "--output-directory",
@@ -132,7 +133,7 @@ parser.add_argument(
     help="override class guid input,\
                     format is xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 )
-parser.add_argument("-w", "--warning-as-error", dest="WarningAsError", help="treat warning as an error")
+parser.add_argument("-wae", "--warning-as-error", dest="WarningAsError", help="treat warning as an error")
 parser.add_argument(
     "-a",
     "--autodefault",
@@ -181,14 +182,21 @@ class CmdParser:
         if Args.ModuleName:
             self.Options.ModuleName = Args.ModuleName
 
-        if Args.IncludePaths:
-            Paths = Args.IncludePaths
-            if Paths == None:
-                EdkLogger.error("VfrCompiler", OPTION_MISSING, "-i missing path argument")
-                self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_DEAD)
-                return
-            for Path in Paths:
-                self.Options.IncludePaths.append(Path.replace("Ic:", "")[1:])
+        # if Args.IncludePaths:
+        #     Paths = Args.IncludePaths
+        #     if Paths == None:
+        #         EdkLogger.error("VfrCompiler", OPTION_MISSING, "-i missing path argument")
+        #         self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_DEAD)
+        #         return
+        #     for Path in Paths:
+        #         if Path.startswith('/Ic:'):
+        #             self.Options.IncludePaths.append(Path.replace("/Ic:", "c:", 1))
+        #         elif Path.startswith('/IC:'):
+        #             self.Options.IncludePaths.append(Path.replace("/IC:", "C:", 1))
+        #         elif Path.startswith('Ic:'):
+        #             self.Options.IncludePaths.append(Path.replace("Ic:", "c:", 1))
+        #         elif Path.startswith('IC:'):
+        #             self.Options.IncludePaths.append(Path.replace("IC:", "C:", 1))
 
         if Args.OutputDirectory:
             self.Options.OutputDirectory = Args.OutputDirectory
@@ -205,6 +213,30 @@ class CmdParser:
                     self.Options.OutputDirectory += "\\"
                     self.Options.DebugDirectory = os.path.dirname(os.path.dirname(self.Options.OutputDirectory)) + "\\DEBUG\\"
             EdkLogger.debug(9, "Output Directory {}".format(self.Options.OutputDirectory))
+
+        if Args.Workspace:
+            self.Options.Workspace  = Args.Workspace
+            IsInCludePathLine = False
+            self.Options.IncludePaths = []
+            MakeFile = os.path.join(os.path.dirname(os.path.dirname(self.Options.OutputDirectory)), 'Makefile')
+            with open(MakeFile, 'r') as File:
+                for Line in File:
+                    if Line.find("INC =  \\") != -1:
+                        IsInCludePathLine = True
+                        continue
+                    if IsInCludePathLine:
+                        Line = Line.lstrip().rstrip(" \\\n\r")
+                        if Line.startswith('/IC'):
+                            InCludePath = Line.replace('/IC', 'C', 1)
+                        elif Line.startswith('/Ic'):
+                            InCludePath = Line.replace('/Ic', 'C', 1)
+                        elif Line.startswith('/I$(WORKSPACE)'):
+                            InCludePath = Line.replace('/I$(WORKSPACE)', self.Options.Workspace, 1)
+                        elif Line.startswith('/I$(DEBUG_DIR)'):
+                            InCludePath = self.Options.DebugDirectory
+                        else:
+                            break
+                        self.Options.IncludePaths.append(InCludePath)
 
         if Args.OldOutputDirectory:
             self.Options.OldOutputDirectory = Args.OldOutputDirectory
