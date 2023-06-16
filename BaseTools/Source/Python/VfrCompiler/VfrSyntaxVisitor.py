@@ -806,8 +806,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
         if ctx.QType == EFI_QUESION_TYPE.QUESTION_NORMAL:
             if self.IsCheckBoxOp:
-                #ctx.BaseInfo.VarType = EFI_IFR_TYPE_BOOLEAN
-                pass
+                ctx.BaseInfo.VarType = EFI_IFR_TYPE_BOOLEAN
             QId, ReturnCode = self.VfrQuestionDB.RegisterQuestion(QName, VarIdStr, QId, gFormPkg)
             self.ErrorHandler(ReturnCode, ctx.start.line)
 

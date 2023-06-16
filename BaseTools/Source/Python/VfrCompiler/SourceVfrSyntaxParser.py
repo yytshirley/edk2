@@ -16,7 +16,7 @@ from VfrCompiler.IfrPreProcess import *
 
 def serializedATN():
     with StringIO() as buf:
-        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\u0105")
+        buf.write("\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\u0109")
         buf.write("\u0c2f\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7")
         buf.write("\4\b\t\b\4\t\t\t\4\n\t\n\4\13\t\13\4\f\t\f\4\r\t\r\4\16")
         buf.write("\t\16\4\17\t\17\4\20\t\20\4\21\t\21\4\22\t\22\4\23\t\23")
@@ -358,7 +358,7 @@ def serializedATN():
         buf.write("\u0182\u0184\u0186\u0188\u018a\u018c\u018e\u0190\u0192")
         buf.write("\u0194\2\13\3\2\4\5\3\2\u0085\u0086\3\2\u008a\u008c\3")
         buf.write("\2RV\3\2\u00fa\u00fb\3\2\u00ef\u00f2\4\2\u00d3\u00d9\u00fa")
-        buf.write("\u00fa\3\2\u00f6\u00f7\3\2\u00f8\u00fa\2\u0d51\2\u0196")
+        buf.write("\u00fb\3\2\u00f6\u00f7\3\2\u00f8\u00fa\2\u0d51\2\u0196")
         buf.write("\3\2\2\2\4\u019f\3\2\2\2\6\u01a2\3\2\2\2\b\u01a4\3\2\2")
         buf.write("\2\n\u01ae\3\2\2\2\f\u01b0\3\2\2\2\16\u01bb\3\2\2\2\20")
         buf.write("\u01cd\3\2\2\2\22\u01ee\3\2\2\2\24\u01f1\3\2\2\2\26\u01fa")
@@ -1755,7 +1755,11 @@ class SourceVfrSyntaxParser ( Parser ):
                      "'NUMERIC_SIZE_2'", "'NUMERIC_SIZE_4'", "'NUMERIC_SIZE_8'",
                      "'DISPLAY_INT_DEC'", "'DISPLAY_UINT_DEC'", "'DISPLAY_UINT_HEX'",
                      "'INSENSITIVE'", "'SENSITIVE'", "'LAST_NON_MATCH'",
-                     "'FIRST_NON_MATCH'" ]
+                     "'FIRST_NON_MATCH'", "<INVALID>", "<INVALID>", "<INVALID>",
+                     "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>",
+                     "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>",
+                     "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>",
+                     "'\\'" ]
 
     symbolicNames = [ "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>",
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>",
@@ -1817,7 +1821,7 @@ class SourceVfrSyntaxParser ( Parser ):
                       "FirstNonMatch", "Number", "StringIdentifier", "LineDefinition",
                       "IncludeDefinition", "Whitespace", "GuidSubDefinition",
                       "GuidDefinition", "Comment", "Newline", "DefLine",
-                      "LineComment", "Extern" ]
+                      "LineComment", "Extern", "If", "Else", "Endif", "EndLine" ]
 
     RULE_vfrProgram = 0
     RULE_vfrHeader = 1
@@ -2353,6 +2357,10 @@ class SourceVfrSyntaxParser ( Parser ):
     DefLine=257
     LineComment=258
     Extern=259
+    If=260
+    Else=261
+    Endif=262
+    EndLine=263
 
     def __init__(self, input:TokenStream, output:TextIO = sys.stdout):
         super().__init__(input, output)
@@ -18335,7 +18343,7 @@ class SourceVfrSyntaxParser ( Parser ):
                 self.state = 2766
                 self.vfrExpressionBuildInFunction(ExpInfo)
                 pass
-            elif token in [SourceVfrSyntaxParser.TrueSymbol, SourceVfrSyntaxParser.FalseSymbol, SourceVfrSyntaxParser.One, SourceVfrSyntaxParser.Ones, SourceVfrSyntaxParser.Zero, SourceVfrSyntaxParser.Undefined, SourceVfrSyntaxParser.Version, SourceVfrSyntaxParser.Number]:
+            elif token in [SourceVfrSyntaxParser.TrueSymbol, SourceVfrSyntaxParser.FalseSymbol, SourceVfrSyntaxParser.One, SourceVfrSyntaxParser.Ones, SourceVfrSyntaxParser.Zero, SourceVfrSyntaxParser.Undefined, SourceVfrSyntaxParser.Version, SourceVfrSyntaxParser.Number, SourceVfrSyntaxParser.StringIdentifier]:
                 self.enterOuterAlt(localctx, 6)
                 self.state = 2767
                 self.vfrExpressionConstant(ExpInfo)
@@ -19953,6 +19961,9 @@ class SourceVfrSyntaxParser ( Parser ):
         def Number(self):
             return self.getToken(SourceVfrSyntaxParser.Number, 0)
 
+        def StringIdentifier(self):
+            return self.getToken(SourceVfrSyntaxParser.StringIdentifier, 0)
+
         def getRuleIndex(self):
             return SourceVfrSyntaxParser.RULE_vfrExpressionConstant
 
@@ -19974,7 +19985,7 @@ class SourceVfrSyntaxParser ( Parser ):
             self.enterOuterAlt(localctx, 1)
             self.state = 2931
             _la = self._input.LA(1)
-            if not(((((_la - 209)) & ~0x3f) == 0 and ((1 << (_la - 209)) & ((1 << (SourceVfrSyntaxParser.TrueSymbol - 209)) | (1 << (SourceVfrSyntaxParser.FalseSymbol - 209)) | (1 << (SourceVfrSyntaxParser.One - 209)) | (1 << (SourceVfrSyntaxParser.Ones - 209)) | (1 << (SourceVfrSyntaxParser.Zero - 209)) | (1 << (SourceVfrSyntaxParser.Undefined - 209)) | (1 << (SourceVfrSyntaxParser.Version - 209)) | (1 << (SourceVfrSyntaxParser.Number - 209)))) != 0)):
+            if not(((((_la - 209)) & ~0x3f) == 0 and ((1 << (_la - 209)) & ((1 << (SourceVfrSyntaxParser.TrueSymbol - 209)) | (1 << (SourceVfrSyntaxParser.FalseSymbol - 209)) | (1 << (SourceVfrSyntaxParser.One - 209)) | (1 << (SourceVfrSyntaxParser.Ones - 209)) | (1 << (SourceVfrSyntaxParser.Zero - 209)) | (1 << (SourceVfrSyntaxParser.Undefined - 209)) | (1 << (SourceVfrSyntaxParser.Version - 209)) | (1 << (SourceVfrSyntaxParser.Number - 209)) | (1 << (SourceVfrSyntaxParser.StringIdentifier - 209)))) != 0)):
                 self._errHandler.recoverInline(self)
             else:
                 self._errHandler.reportMatch(self)
@@ -21507,7 +21518,7 @@ class SourceVfrSyntaxParser ( Parser ):
             self.state = 3111
             self._errHandler.sync(self)
             _la = self._input.LA(1)
-            while _la==SourceVfrSyntaxParser.OpenParen or ((((_la - 192)) & ~0x3f) == 0 and ((1 << (_la - 192)) & ((1 << (SourceVfrSyntaxParser.Cond - 192)) | (1 << (SourceVfrSyntaxParser.Find - 192)) | (1 << (SourceVfrSyntaxParser.Mid - 192)) | (1 << (SourceVfrSyntaxParser.Tok - 192)) | (1 << (SourceVfrSyntaxParser.Span - 192)) | (1 << (SourceVfrSyntaxParser.Dup - 192)) | (1 << (SourceVfrSyntaxParser.VarEqVal - 192)) | (1 << (SourceVfrSyntaxParser.IdEqVal - 192)) | (1 << (SourceVfrSyntaxParser.IdEqId - 192)) | (1 << (SourceVfrSyntaxParser.IdEqValList - 192)) | (1 << (SourceVfrSyntaxParser.QuestionRef - 192)) | (1 << (SourceVfrSyntaxParser.RuleRef - 192)) | (1 << (SourceVfrSyntaxParser.StringRef - 192)) | (1 << (SourceVfrSyntaxParser.PushThis - 192)) | (1 << (SourceVfrSyntaxParser.Security - 192)) | (1 << (SourceVfrSyntaxParser.Get - 192)) | (1 << (SourceVfrSyntaxParser.TrueSymbol - 192)) | (1 << (SourceVfrSyntaxParser.FalseSymbol - 192)) | (1 << (SourceVfrSyntaxParser.One - 192)) | (1 << (SourceVfrSyntaxParser.Ones - 192)) | (1 << (SourceVfrSyntaxParser.Zero - 192)) | (1 << (SourceVfrSyntaxParser.Undefined - 192)) | (1 << (SourceVfrSyntaxParser.Version - 192)) | (1 << (SourceVfrSyntaxParser.Length - 192)) | (1 << (SourceVfrSyntaxParser.NOT - 192)) | (1 << (SourceVfrSyntaxParser.Set - 192)) | (1 << (SourceVfrSyntaxParser.BitWiseNot - 192)) | (1 << (SourceVfrSyntaxParser.BoolVal - 192)) | (1 << (SourceVfrSyntaxParser.StringVal - 192)) | (1 << (SourceVfrSyntaxParser.UnIntVal - 192)) | (1 << (SourceVfrSyntaxParser.ToUpper - 192)) | (1 << (SourceVfrSyntaxParser.ToLower - 192)) | (1 << (SourceVfrSyntaxParser.Match - 192)) | (1 << (SourceVfrSyntaxParser.Match2 - 192)) | (1 << (SourceVfrSyntaxParser.Catenate - 192)) | (1 << (SourceVfrSyntaxParser.QuestionRefVal - 192)) | (1 << (SourceVfrSyntaxParser.StringRefVal - 192)) | (1 << (SourceVfrSyntaxParser.Map - 192)) | (1 << (SourceVfrSyntaxParser.Number - 192)))) != 0):
+            while _la==SourceVfrSyntaxParser.OpenParen or ((((_la - 192)) & ~0x3f) == 0 and ((1 << (_la - 192)) & ((1 << (SourceVfrSyntaxParser.Cond - 192)) | (1 << (SourceVfrSyntaxParser.Find - 192)) | (1 << (SourceVfrSyntaxParser.Mid - 192)) | (1 << (SourceVfrSyntaxParser.Tok - 192)) | (1 << (SourceVfrSyntaxParser.Span - 192)) | (1 << (SourceVfrSyntaxParser.Dup - 192)) | (1 << (SourceVfrSyntaxParser.VarEqVal - 192)) | (1 << (SourceVfrSyntaxParser.IdEqVal - 192)) | (1 << (SourceVfrSyntaxParser.IdEqId - 192)) | (1 << (SourceVfrSyntaxParser.IdEqValList - 192)) | (1 << (SourceVfrSyntaxParser.QuestionRef - 192)) | (1 << (SourceVfrSyntaxParser.RuleRef - 192)) | (1 << (SourceVfrSyntaxParser.StringRef - 192)) | (1 << (SourceVfrSyntaxParser.PushThis - 192)) | (1 << (SourceVfrSyntaxParser.Security - 192)) | (1 << (SourceVfrSyntaxParser.Get - 192)) | (1 << (SourceVfrSyntaxParser.TrueSymbol - 192)) | (1 << (SourceVfrSyntaxParser.FalseSymbol - 192)) | (1 << (SourceVfrSyntaxParser.One - 192)) | (1 << (SourceVfrSyntaxParser.Ones - 192)) | (1 << (SourceVfrSyntaxParser.Zero - 192)) | (1 << (SourceVfrSyntaxParser.Undefined - 192)) | (1 << (SourceVfrSyntaxParser.Version - 192)) | (1 << (SourceVfrSyntaxParser.Length - 192)) | (1 << (SourceVfrSyntaxParser.NOT - 192)) | (1 << (SourceVfrSyntaxParser.Set - 192)) | (1 << (SourceVfrSyntaxParser.BitWiseNot - 192)) | (1 << (SourceVfrSyntaxParser.BoolVal - 192)) | (1 << (SourceVfrSyntaxParser.StringVal - 192)) | (1 << (SourceVfrSyntaxParser.UnIntVal - 192)) | (1 << (SourceVfrSyntaxParser.ToUpper - 192)) | (1 << (SourceVfrSyntaxParser.ToLower - 192)) | (1 << (SourceVfrSyntaxParser.Match - 192)) | (1 << (SourceVfrSyntaxParser.Match2 - 192)) | (1 << (SourceVfrSyntaxParser.Catenate - 192)) | (1 << (SourceVfrSyntaxParser.QuestionRefVal - 192)) | (1 << (SourceVfrSyntaxParser.StringRefVal - 192)) | (1 << (SourceVfrSyntaxParser.Map - 192)) | (1 << (SourceVfrSyntaxParser.Number - 192)) | (1 << (SourceVfrSyntaxParser.StringIdentifier - 192)))) != 0):
                 self.state = 3104
                 self.vfrStatementExpression(localctx.Node)
                 self.state = 3105

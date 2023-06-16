@@ -1407,8 +1407,6 @@ locals[Node=IfrTreeNode(EFI_IFR_STRING_REF1_OP)]
             'STRING_TOKEN' '(' S=StringIdentifier ')'
         |   Number
         )
-
-
     ')'
     ;
 
@@ -1445,6 +1443,7 @@ locals[Node]
     |   'UNDEFINED'
     |   'VERSION'
     |   Number
+    |   StringIdentifier
     ;
 
 vfrExpressionUnaryOp[ExpInfo]
@@ -1940,4 +1939,23 @@ LineComment
 Extern
     : 'extern' ~[#\r\n]*
         -> skip
+    ;
+
+If
+    : '#' Whitespace? 'if' ~[#\r\n]*
+        ->skip
+    ;
+
+Else
+    :  '#' Whitespace? 'else' ~[#\r\n]*
+        ->skip
+    ;
+
+Endif
+    :  '#' Whitespace? 'endif' ~[#\r\n]*
+        ->skip
+    ;
+
+EndLine
+    : '\\' -> skip
     ;

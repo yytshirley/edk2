@@ -7,6 +7,7 @@ import CppHeaderParser
 from VfrCompiler.IfrFormPkg import *
 from VfrCompiler.IfrCtypes import *
 from Common.LongFilePathSupport import LongFilePath
+import subprocess
 
 
 class Options:
@@ -137,6 +138,7 @@ class PreProcessDB:
                 if i != len(Items) - 1:
                     NewValue += " | "
             return NewValue
+        return Key
         # else:
         #     EdkLogger.error("VfrCompiler", PARAMETER_INVALID, "Invalid parameter:  %s" % Key, None)
 
@@ -194,31 +196,59 @@ class PreProcessDB:
 
     def _GetHeaderDicts(self, HeaderFiles):
         HeaderDict = {}
-        for HeaderFile in HeaderFiles:
-            FileList = self._FindIncludeHeaderFile(self.Options.IncludePaths, HeaderFile)
-            CppHeader = None
-            for File in FileList:
-                if File.find(HeaderFile.replace("/", "\\")) != -1:
-                    CppHeader = CppHeaderParser.CppHeader(File)
-                    self._ParseDefines(File, HeaderDict)
-            if CppHeader == None:
-                EdkLogger.error("VfrCompiler", FILE_NOT_FOUND, "File/directory %s not found in workspace" % (HeaderFile), None)
+        VFRrespPath  = os.path.join(self.Options.OutputDirectory, "vfrpp_resp.txt")
+        if os.path.exists(VFRrespPath):
+            Command = [
+                r"C:\Program Files (x86)\Microsoft Visual Studio 14.0\Vc\bin\amd64\cl.exe",
+                "/showIncludes",
+                f"@{VFRrespPath}",
+                self.Options.InputFileName
+            ]
+            try:
+                Process = subprocess.Popen(Command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+                _, Error = Process.communicate()
+                print(Error)
+            except subprocess.CalledProcessError as e:
+                print(f"Error executing command: {e}")
+                EdkLogger.error("VfrCompiler", COMMAND_FAILURE, ' '.join(Command))
+            Pattern = r'Note: including file:\s+(.*)'
+            IncludePaths = re.findall(Pattern, Error)
+            for IncludePath in IncludePaths:
+                self._ParseDefines(IncludePath, HeaderDict)
+        else:
+            for HeaderFile in HeaderFiles:
+                FileList = self._FindIncludeHeaderFile(self.Options.IncludePaths, HeaderFile)
+                CppHeader = None
+                for File in FileList:
+                    if File.find(HeaderFile.replace("/", "\\")) != -1:
+                        CppHeader = CppHeaderParser.CppHeader(File)
+                        self._ParseDefines(File, HeaderDict)
+                if CppHeader == None:
+                    EdkLogger.error("VfrCompiler", FILE_NOT_FOUND, "File/directory %s not found in workspace" % (HeaderFile), None)
+                print(f"parent: {HeaderFile}")
+                self._ParseRecursiveHeader(CppHeader, HeaderDict)
 
+        return HeaderDict
+
+    def _ParseRecursiveHeader(self, CppHeader, HeaderDict):
+        if CppHeader != None:
             for Include in CppHeader.includes:
                 Include = Include[1:-1]
+                print(f"child: {Include}")
                 IncludeHeaderFileList = self._FindIncludeHeaderFile(self.Options.IncludePaths, Include)
                 Flag = False
                 for File in IncludeHeaderFileList:
                     if File.find(Include.replace("/", "\\")) != -1:
-                        CppHeader = CppHeaderParser.CppHeader(File)
+                        NewCppHeader = CppHeaderParser.CppHeader(File)
+                        self._ParseRecursiveHeader(NewCppHeader, HeaderDict)
                         self._ParseDefines(File, HeaderDict)
                         Flag = True
                 if Flag == False:
                     EdkLogger.error("VfrCompiler", FILE_NOT_FOUND, "File/directory %s not found in workspace" % Include, None)
-        return HeaderDict
+
 
     def _GetVfrDicts(self):
-        VfrDict = {}
+        VfrDict = {"PLATFORM_VARIABLE_ATTRIBUTES": 0x07}
         if self.Options.LanuchVfrCompiler:
             FileName = self.Options.InputFileName
             self._ParseDefines(FileName, VfrDict)

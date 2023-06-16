@@ -351,6 +351,8 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
             FSObj.SetClassGuid(GuidList[2])
             FSObj.SetClassGuid(GuidList[3])
 
+        print(self.PreProcessDB.Options.InputFileName)
+
         Guid = self.PreProcessDB.Read(ctx.S1.text)
         ctx.Node.Dict["guid"] = KV(ctx.S1.text, Guid)
         Title = self.PreProcessDB.Read(ctx.S2.text)
@@ -589,6 +591,7 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
 
         return VSObj
 
+    # EmulationDfxSetupForms.vfr, PLATFORM_VARIABLE_ATTRIBUTES
     # Visit a parse tree produced by SourceVfrSyntaxParser#vfrStatementVarStoreEfi.
     def visitVfrStatementVarStoreEfi(self, ctx: SourceVfrSyntaxParser.VfrStatementVarStoreEfiContext):
         self.visitChildren(ctx)
@@ -614,14 +617,17 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
 
         if ctx.VarId() != None:
             if ctx.ID != None:
+                Line = ctx.ID.line
                 VarStoreId = self.TransNum(ctx.ID.text)
             elif ctx.S1 != None:
                 VarStoreId = self.PreProcessDB.Read(ctx.S1.text)
+                Line = ctx.S1.line
                 ctx.Node.Dict["varid"] = KV(ctx.S1.text, VarStoreId)
-            self.CompareErrorHandler(VarStoreId != 0, True, ctx.ID.line, ctx.ID.text, "varid 0 is not allowed.")
+            self.CompareErrorHandler(VarStoreId != 0, True, Line, VarStoreId, "varid 0 is not allowed.")
 
         Attributes = 0
         AttributesText = ""
+        print(f"input{self.PreProcessDB.Options.InputFileName}")
         for i in range(0, len(ctx.vfrVarStoreEfiAttr())):
             if type(ctx.vfrVarStoreEfiAttr(i).Attr) == str:
                 Attr = self.PreProcessDB.Read(ctx.vfrVarStoreEfiAttr(i).Attr)
@@ -851,8 +857,8 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
             )
 
         if ctx.QType == EFI_QUESION_TYPE.QUESTION_NORMAL:
-            # if self.IsCheckBoxOp:
-            # ctx.BaseInfo.VarType = EFI_IFR_TYPE_BOOLEAN #
+            if self.IsCheckBoxOp:
+                ctx.BaseInfo.VarType = EFI_IFR_TYPE_BOOLEAN
             QId, ReturnCode = self.VfrQuestionDB.RegisterQuestion(QName, VarIdStr, QId, gFormPkg)
             self.ErrorHandler(ReturnCode, ctx.start.line)
 
@@ -1063,7 +1069,7 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
 
         elif ctx.StringToken() != None:
             ctx.ValueList.append(self.PreProcessDB.Read(ctx.S4.text))
-            ctx.Node.Dict["string"] = KV(ctx.S4.text, self.PreProcessDB.Read(ctx.StringIdentifier()))
+            ctx.Node.Dict["string"] = KV(ctx.S4.text, self.PreProcessDB.Read(self.TransId(ctx.StringIdentifier())))
 
         elif ctx.OpenBrace() != None:
             ctx.ListType = True
@@ -1159,10 +1165,7 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
                         Value = ~Value + 1
                     ctx.ValueList.append(Value)
 
-                if Type == EFI_IFR_TYPE_BOOLEAN:
-                    ctx.ValueList.append(Value)
-
-                if Type == EFI_IFR_TYPE_STRING:
+                else:
                     ctx.ValueList.append(Value)
 
         return ctx.ValueList
@@ -2190,10 +2193,6 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
             ctx.GuidNode.insertChild(ctx.Node)
             # ctx.GuidNode.Parent.insertChild(ctx.Node)
             self.InsertEndNode(ctx.GuidNode, ctx.stop.line)
-
-        # check dataType
-        if self.CurrQestVarInfo.VarType == EFI_IFR_TYPE_OTHER:
-            self.CurrQestVarInfo.VarType = EFI_IFR_TYPE_BOOLEAN
 
         if self.CurrQestVarInfo.VarStoreId != EFI_VARSTORE_ID_INVALID:
             # Check whether the question refers to a bit field, if yes. create a Guid to indicate the question refers to a bit field.
@@ -4885,6 +4884,14 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
             self.SaveOpHdrCond(U64Obj.GetHeader(), (ctx.ExpInfo.ExpOpCount == 0), Line)
             ctx.Node = IfrTreeNode(EFI_IFR_UINT64_OP, U64Obj)
             ctx.ExpInfo.ExpOpCount += 1
+
+        if ctx.StringIdentifier() != None:
+            U64Obj = IfrUint64(Line)
+            U64Obj.SetValue(self.PreProcessDB.Read(self.TransId(ctx.StringIdentifier())))
+            self.SaveOpHdrCond(U64Obj.GetHeader(), (ctx.ExpInfo.ExpOpCount == 0), Line)
+            ctx.Node = IfrTreeNode(EFI_IFR_UINT64_OP, U64Obj)
+            ctx.ExpInfo.ExpOpCount += 1
+
 
         return ctx.Node
 
