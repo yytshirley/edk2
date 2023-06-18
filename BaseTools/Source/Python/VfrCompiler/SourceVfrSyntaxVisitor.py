@@ -26,7 +26,8 @@ else:
 
 # This class defines a complete generic visitor for a parse tree produced by SourceVfrSyntaxParser.
 class SourceVfrSyntaxVisitor(ParseTreeVisitor):
-    def __init__(self, PreProcessDB: PreProcessDB = None, Root=None, OverrideClassGuid=None, QuestionDB: VfrQuestionDB = None):
+    def __init__(self, PreProcessDB: PreProcessDB = None, Root=None, OverrideClassGuid=None, QuestionDB: VfrQuestionDB = None, \
+        HeaderFlag = True, FormsetFlag = False):
         self.Root = Root if Root != None else IfrTreeNode()
         self.PreProcessDB = PreProcessDB
         self.OverrideClassGuid = OverrideClassGuid
@@ -53,6 +54,9 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
         self.IsCheckBoxOp = False
         self.NeedAdjustOpcode = False
 
+        self.HeaderFlag = HeaderFlag
+        self.FormsetFlag = FormsetFlag
+
     # Visit a parse tree produced by SourceVfrSyntaxParser#vfrProgram.
     def visitVfrProgram(self, ctx: SourceVfrSyntaxParser.VfrProgramContext):
         # self.VfrQuestionDB.PrintAllQuestion('Questions.txt')
@@ -60,7 +64,8 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by SourceVfrSyntaxParser#vfrHeader.
     def visitVfrHeader(self, ctx: SourceVfrSyntaxParser.VfrHeaderContext):
-        self.visitChildren(ctx)
+        if self.HeaderFlag:
+            self.visitChildren(ctx)
         return gVfrVarDataTypeDB
 
     # Visit a parse tree produced by SourceVfrSyntaxParser#pragmaPackShowDef.
@@ -280,131 +285,158 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by SourceVfrSyntaxParser#vfrFormSetDefinition.
     def visitVfrFormSetDefinition(self, ctx: SourceVfrSyntaxParser.VfrFormSetDefinitionContext):
-        self.InsertChild(self.Root, ctx)
-        self.InsertChild(ctx.Node, ctx.classDefinition())
-        self.InsertChild(ctx.Node, ctx.subclassDefinition())
-        DsNode, DsNodeMF = self.DeclareStandardDefaultStorage(ctx.start.line)
-        ctx.Node.insertChild(DsNode)
-        ctx.Node.insertChild(DsNodeMF)
+        if self.FormsetFlag:
+            self.InsertChild(self.Root, ctx)
+            self.InsertChild(ctx.Node, ctx.classDefinition())
+            self.InsertChild(ctx.Node, ctx.subclassDefinition())
+            DsNode, DsNodeMF = self.DeclareStandardDefaultStorage(ctx.start.line)
+            ctx.Node.insertChild(DsNode)
+            ctx.Node.insertChild(DsNodeMF)
 
-        self.visitChildren(ctx)
+            self.visitChildren(ctx)
 
-        ClassGuidNum = 0
-        GuidList = []
-        if ctx.classguidDefinition() != None:
-            GuidList = ctx.classguidDefinition().GuidList
-            ClassGuidNum = len(GuidList)
+            ClassGuidNum = 0
+            GuidList = []
+            if ctx.classguidDefinition() != None:
+                GuidList = ctx.classguidDefinition().GuidList
+                ClassGuidNum = len(GuidList)
 
-        DefaultClassGuid = EFI_HII_PLATFORM_SETUP_FORMSET_GUID
+            DefaultClassGuid = EFI_HII_PLATFORM_SETUP_FORMSET_GUID
 
-        if self.OverrideClassGuid != None and ClassGuidNum >= 4:
-            self.ErrorHandler(
-                VfrReturnCode.VFR_RETURN_INVALID_PARAMETER,
-                ctx.start.line,
-                None,
-                "Already has 4 class guids, can not add extra class guid!",
-            )
+            if self.OverrideClassGuid != None and ClassGuidNum >= 4:
+                self.ErrorHandler(
+                    VfrReturnCode.VFR_RETURN_INVALID_PARAMETER,
+                    ctx.start.line,
+                    None,
+                    "Already has 4 class guids, can not add extra class guid!",
+                )
 
-        if ClassGuidNum == 0:
-            if self.OverrideClassGuid != None:
-                ClassGuidNum = 2
+            if ClassGuidNum == 0:
+                if self.OverrideClassGuid != None:
+                    ClassGuidNum = 2
+                else:
+                    ClassGuidNum = 1
+                FSObj = IfrFormSet(sizeof(EFI_IFR_FORM_SET) + ClassGuidNum * sizeof(EFI_GUID))
+                FSObj.SetClassGuid(DefaultClassGuid)
+                if self.OverrideClassGuid != None:
+                    FSObj.SetClassGuid(self.OverrideClassGuid)
+
+            elif ClassGuidNum == 1:
+                if self.OverrideClassGuid != None:
+                    ClassGuidNum += 1
+                FSObj = IfrFormSet(sizeof(EFI_IFR_FORM_SET) + ClassGuidNum * sizeof(EFI_GUID))
+                FSObj.SetClassGuid(GuidList[0])
+                if self.OverrideClassGuid != None:
+                    FSObj.SetClassGuid(self.OverrideClassGuid)
+
+            elif ClassGuidNum == 2:
+                if self.OverrideClassGuid != None:
+                    ClassGuidNum += 1
+                FSObj = IfrFormSet(sizeof(EFI_IFR_FORM_SET) + ClassGuidNum * sizeof(EFI_GUID))
+                FSObj.SetClassGuid(GuidList[0])
+                FSObj.SetClassGuid(GuidList[1])
+                if self.OverrideClassGuid != None:
+                    FSObj.SetClassGuid(self.OverrideClassGuid)
+
+            elif ClassGuidNum == 3:
+                if self.OverrideClassGuid != None:
+                    ClassGuidNum += 1
+                FSObj = IfrFormSet(sizeof(EFI_IFR_FORM_SET) + ClassGuidNum * sizeof(EFI_GUID))
+                FSObj.SetClassGuid(GuidList[0])
+                FSObj.SetClassGuid(GuidList[1])
+                FSObj.SetClassGuid(GuidList[2])
+                if self.OverrideClassGuid != None:
+                    FSObj.SetClassGuid(self.OverrideClassGuid)
+
+            elif ClassGuidNum == 4:
+                if self.OverrideClassGuid != None:
+                    ClassGuidNum += 1
+                FSObj = IfrFormSet(sizeof(EFI_IFR_FORM_SET) + ClassGuidNum * sizeof(EFI_GUID))
+                FSObj.SetClassGuid(GuidList[0])
+                FSObj.SetClassGuid(GuidList[1])
+                FSObj.SetClassGuid(GuidList[2])
+                FSObj.SetClassGuid(GuidList[3])
+
+            print(self.PreProcessDB.Options.InputFileName)
+
+            Guid = ctx.guidDefinition().Guid
+            ctx.Node.Dict["guid"] = KV(self.PreProcessDB.GetGuidKey(Guid), Guid)
+            Title = self.PreProcessDB.Read(ctx.S2.text)
+            ctx.Node.Dict["title"] = KV(ctx.S2.text, Title)
+            Help = self.PreProcessDB.Read(ctx.S3.text)
+            ctx.Node.Dict["help"] = KV(ctx.S3.text, Help)
+
+            FSObj.SetLineNo(ctx.start.line)
+            FSObj.SetGuid(Guid)
+            FSObj.SetFormSetTitle(Title)
+            FSObj.SetHelp(Help)
+
+            ctx.Node.Data = FSObj
+            ctx.Node.Buffer = gFormPkg.StructToStream(FSObj.GetInfo())
+            if len(GuidList) == 0:
+                ctx.Node.Buffer += gFormPkg.StructToStream(DefaultClassGuid)
             else:
-                ClassGuidNum = 1
-            FSObj = IfrFormSet(sizeof(EFI_IFR_FORM_SET) + ClassGuidNum * sizeof(EFI_GUID))
-            FSObj.SetClassGuid(DefaultClassGuid)
-            if self.OverrideClassGuid != None:
-                FSObj.SetClassGuid(self.OverrideClassGuid)
+                for i in range(0, len(GuidList)):
+                    ctx.Node.Buffer += gFormPkg.StructToStream(GuidList[i])
 
-        elif ClassGuidNum == 1:
-            if self.OverrideClassGuid != None:
-                ClassGuidNum += 1
-            FSObj = IfrFormSet(sizeof(EFI_IFR_FORM_SET) + ClassGuidNum * sizeof(EFI_GUID))
-            FSObj.SetClassGuid(GuidList[0])
-            if self.OverrideClassGuid != None:
-                FSObj.SetClassGuid(self.OverrideClassGuid)
+            # Declare undefined Question so that they can be used in expression.
+            InsertOpCodeList = None
+            if gFormPkg.HavePendingUnassigned():
+                InsertOpCodeList, ReturnCode = gFormPkg.DeclarePendingQuestion(gVfrVarDataTypeDB, gVfrDataStorage, self.VfrQuestionDB, ctx.stop.line)
+                Status = 0 if ReturnCode == VfrReturnCode.VFR_RETURN_SUCCESS else 1
+                self.ParserStatus += Status  ###
+                self.NeedAdjustOpcode = True
 
-        elif ClassGuidNum == 2:
-            if self.OverrideClassGuid != None:
-                ClassGuidNum += 1
-            FSObj = IfrFormSet(sizeof(EFI_IFR_FORM_SET) + ClassGuidNum * sizeof(EFI_GUID))
-            FSObj.SetClassGuid(GuidList[0])
-            FSObj.SetClassGuid(GuidList[1])
-            if self.OverrideClassGuid != None:
-                FSObj.SetClassGuid(self.OverrideClassGuid)
+            self.InsertEndNode(ctx.Node, ctx.stop.line)
 
-        elif ClassGuidNum == 3:
-            if self.OverrideClassGuid != None:
-                ClassGuidNum += 1
-            FSObj = IfrFormSet(sizeof(EFI_IFR_FORM_SET) + ClassGuidNum * sizeof(EFI_GUID))
-            FSObj.SetClassGuid(GuidList[0])
-            FSObj.SetClassGuid(GuidList[1])
-            FSObj.SetClassGuid(GuidList[2])
-            if self.OverrideClassGuid != None:
-                FSObj.SetClassGuid(self.OverrideClassGuid)
+            if self.NeedAdjustOpcode:
+                self.LastFormNode.Child.pop()
+                for InsertOpCode in InsertOpCodeList:
+                    InsertNode = IfrTreeNode(InsertOpCode.OpCode, InsertOpCode.Data, gFormPkg.StructToStream(InsertOpCode.Data.GetInfo()))
+                    self.LastFormNode.insertChild(InsertNode)
 
-        elif ClassGuidNum == 4:
-            if self.OverrideClassGuid != None:
-                ClassGuidNum += 1
-            FSObj = IfrFormSet(sizeof(EFI_IFR_FORM_SET) + ClassGuidNum * sizeof(EFI_GUID))
-            FSObj.SetClassGuid(GuidList[0])
-            FSObj.SetClassGuid(GuidList[1])
-            FSObj.SetClassGuid(GuidList[2])
-            FSObj.SetClassGuid(GuidList[3])
-
-        print(self.PreProcessDB.Options.InputFileName)
-
-        Guid = self.PreProcessDB.Read(ctx.S1.text)
-        ctx.Node.Dict["guid"] = KV(ctx.S1.text, Guid)
-        Title = self.PreProcessDB.Read(ctx.S2.text)
-        ctx.Node.Dict["title"] = KV(ctx.S2.text, Title)
-        Help = self.PreProcessDB.Read(ctx.S3.text)
-        ctx.Node.Dict["help"] = KV(ctx.S3.text, Help)
-
-        FSObj.SetLineNo(ctx.start.line)
-        FSObj.SetGuid(Guid)
-        FSObj.SetFormSetTitle(Title)
-        FSObj.SetHelp(Help)
-
-        ctx.Node.Data = FSObj
-        ctx.Node.Buffer = gFormPkg.StructToStream(FSObj.GetInfo())
-        if len(GuidList) == 0:
-            ctx.Node.Buffer += gFormPkg.StructToStream(DefaultClassGuid)
-        else:
-            for i in range(0, len(GuidList)):
-                ctx.Node.Buffer += gFormPkg.StructToStream(GuidList[i])
-
-        # Declare undefined Question so that they can be used in expression.
-        InsertOpCodeList = None
-        if gFormPkg.HavePendingUnassigned():
-            InsertOpCodeList, ReturnCode = gFormPkg.DeclarePendingQuestion(gVfrVarDataTypeDB, gVfrDataStorage, self.VfrQuestionDB, ctx.stop.line)
-            Status = 0 if ReturnCode == VfrReturnCode.VFR_RETURN_SUCCESS else 1
-            self.ParserStatus += Status  ###
-            self.NeedAdjustOpcode = True
-
-        self.InsertEndNode(ctx.Node, ctx.stop.line)
-
-        if self.NeedAdjustOpcode:
-            self.LastFormNode.Child.pop()
-            for InsertOpCode in InsertOpCodeList:
-                InsertNode = IfrTreeNode(InsertOpCode.OpCode, InsertOpCode.Data, gFormPkg.StructToStream(InsertOpCode.Data.GetInfo()))
-                self.LastFormNode.insertChild(InsertNode)
-
-        gFormPkg.BuildPkg(self.Root)
+            gFormPkg.BuildPkg(self.Root)
         return ctx.Node
 
     # Visit a parse tree produced by SourceVfrSyntaxParser#classguidDefinition.
     def visitClassguidDefinition(self, ctx: SourceVfrSyntaxParser.ClassguidDefinitionContext):
         self.visitChildren(ctx)
 
-        for GuidItem in ctx.StringIdentifier():
-            GuidStr = str(GuidItem)
-            Guid = self.PreProcessDB.Read(GuidStr)
+        for GuidCtx in ctx.guidDefinition():
+
+            Guid = GuidCtx.Guid
             if "classguid" not in ctx.Node.Dict.keys():
-                ctx.Node.Dict["classguid"] = [KV(GuidStr, Guid)]
+                ctx.Node.Dict["classguid"] = [KV(self.PreProcessDB.GetGuidKey(Guid), Guid)]
             else:
-                ctx.Node.Dict["classguid"].append(KV(GuidStr, Guid))
+                ctx.Node.Dict["classguid"].append(KV(self.PreProcessDB.GetGuidKey(Guid), Guid))
             ctx.GuidList.append(Guid)
         return ctx.Node
+
+    # Visit a parse tree produced by SourceVfrSyntaxParser#guidSubDefinition.
+    def visitGuidSubDefinition(self, ctx:SourceVfrSyntaxParser.GuidSubDefinitionContext):
+
+        ctx.Guid.Data4[0] = self.TransNum(ctx.Number(0))
+        ctx.Guid.Data4[1] = self.TransNum(ctx.Number(1))
+        ctx.Guid.Data4[2] = self.TransNum(ctx.Number(2))
+        ctx.Guid.Data4[3] = self.TransNum(ctx.Number(3))
+        ctx.Guid.Data4[4] = self.TransNum(ctx.Number(4))
+        ctx.Guid.Data4[5] = self.TransNum(ctx.Number(5))
+        ctx.Guid.Data4[6] = self.TransNum(ctx.Number(6))
+        ctx.Guid.Data4[7] = self.TransNum(ctx.Number(7))
+
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by SourceVfrSyntaxParser#guidDefinition.
+    def visitGuidDefinition(self, ctx:SourceVfrSyntaxParser.GuidDefinitionContext):
+
+        self.visitChildren(ctx)
+
+        ctx.Guid.Data1 = self.TransNum(ctx.Number(0))
+        ctx.Guid.Data2 = self.TransNum(ctx.Number(1))
+        ctx.Guid.Data3 = self.TransNum(ctx.Number(2))
+
+        return ctx.Guid
 
     # Visit a parse tree produced by SourceVfrSyntaxParser#classDefinition.
     def visitClassDefinition(self, ctx: SourceVfrSyntaxParser.ClassDefinitionContext):
@@ -572,8 +604,8 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
         Line = ctx.start.line
         VSObj.SetLineNo(Line)
         VSObj.SetHasVarStoreId(ctx.VarId() != None)
-        Guid = self.PreProcessDB.Read(ctx.SG.text)
-        ctx.Node.Dict["guid"] = KV(ctx.SG.text, Guid)
+        Guid = self.guidDefinition().Guid
+        ctx.Node.Dict["guid"] = KV(self.PreProcessDB.GetGuidKey(Guid), Guid)
         self.ErrorHandler(
             gVfrDataStorage.DeclareBufferVarStore(StoreName, Guid, gVfrVarDataTypeDB, TypeName, VarStoreId, IsBitVarStore),
             Line,
@@ -597,8 +629,8 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
         self.visitChildren(ctx)
         Line = ctx.start.line
 
-        Guid = self.PreProcessDB.Read(ctx.SG.text)
-        ctx.Node.Dict["guid"] = KV(ctx.SG.text, Guid)
+        Guid = self.guidDefinition().Guid
+        ctx.Node.Dict["guid"] = KV(self.PreProcessDB.GetGuidKey(Guid), Guid)
 
         CustomizedName = False
         IsBitVarStore = False
@@ -627,7 +659,6 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
 
         Attributes = 0
         AttributesText = ""
-        print(f"input{self.PreProcessDB.Options.InputFileName}")
         for i in range(0, len(ctx.vfrVarStoreEfiAttr())):
             if type(ctx.vfrVarStoreEfiAttr(i).Attr) == str:
                 Attr = self.PreProcessDB.Read(ctx.vfrVarStoreEfiAttr(i).Attr)
@@ -723,8 +754,8 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
         VSNVObj = IfrVarStoreNameValue(StoreName)
         self.visitChildren(ctx)
 
-        Guid = self.PreProcessDB.Read(ctx.SG.text)
-        ctx.Node.Dict["guid"] = KV(ctx.SG.text, Guid)
+        Guid = self.guidDefinition().Guid
+        ctx.Node.Dict["guid"] = KV(self.PreProcessDB.GetGuidKey(Guid), Guid)
         HasVarStoreId = False
         VarStoreId = EFI_VARSTORE_ID_INVALID
 
@@ -1061,8 +1092,8 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
             Ref = EFI_HII_REF()
             Ref.QuestionId = self.TransNum(ctx.Number(0))
             Ref.FormId = self.TransNum(ctx.Number(1))
-            Ref.FormSetGuid = self.PreProcessDB.Read(ctx.S2.text)
-            ctx.Node.Dict["formsetguid"] = KV(ctx.S2.text, Ref.FormSetGuid)
+            Ref.FormSetGuid = self.guidDefinition().Guid
+            ctx.Node.Dict["formsetguid"] = KV(self.PreProcessDB.GetGuidKey(Ref.FormSetGuid), Ref.FormsetGuid)
             Ref.DevicePath = self.PreProcessDB.Read(ctx.S3.text)
             ctx.Node.Dict["devicepath"] = KV(ctx.S3.text, Ref.DevicePath)
             ctx.ValueList.append(Ref)
@@ -1291,14 +1322,14 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
         if FormMapMethodNumber == 0:
             self.ErrorHandler(VfrReturnCode.VFR_RETURN_INVALID_PARAMETER, Line, "No MapMethod is set for FormMap!")
         else:
-            Index = 0
-            for i in range(SIndex, SIndex + FormMapMethodNumber * 2, 2):
-                MapTitle = self.PreProcessDB.Read(self.TransId(ctx.StringIdentifier(i)))
-                ctx.Node.Dict["maptitle" + str(Index)] = KV(self.TransId(ctx.StringIdentifier(i)), MapTitle)
-                MapGuid = self.PreProcessDB.Read(self.TransId(ctx.StringIdentifier(i + 1)))
-                ctx.Node.Dict["mapguid" + str(Index)] = KV(self.TransId(ctx.StringIdentifier(i + 1)), MapGuid)
+            for i in range(0, FormMapMethodNumber):
+                MapTitle = self.PreProcessDB.Read(self.TransId(ctx.StringIdentifier(i + SIndex)))
+                ctx.Node.Dict["maptitle" + str(i)] = KV(self.TransId(ctx.StringIdentifier(i + SIndex)), MapTitle)
+                MapGuid = self.guidDefinition(i).Guid
+                ctx.Node.Dict["mapguid" + str(i)] = KV(self.PreProcessDB.GetGuidKey(MapGuid), MapGuid)
                 FMapObj.SetFormMapMethod(MapTitle, MapGuid)
-                Index = Index + 1
+
+
         FormMap = FMapObj.GetInfo()
         MethodMapList = FMapObj.GetMethodMapList()
         for MethodMap in MethodMapList:  # Extend Header Size for MethodMapList
@@ -1505,8 +1536,8 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
             RefType = 4
             DevPath = self.PreProcessDB.Read(ctx.S.text)
             ctx.Node.Dict["devicepath"] = KV(ctx.S.text, DevPath)
-            FormSetGuid = self.PreProcessDB.Read(ctx.SG1.text)
-            ctx.Node.Dict["formsetguid"] = KV(ctx.SG1.text, FormSetGuid)
+            FormSetGuid = self.guidDefinition().Guid
+            ctx.Node.Dict["formsetguid"] = KV(self.PreProcessDB.GetGuidKey(FormSetGuid), FormSetGuid)
             if ctx.NF1 != None:
                 FId = self.TransNum(ctx.NF1.text)
             else:
@@ -1530,6 +1561,8 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
             RefType = 3
             FormSetGuid = self.PreProcessDB.Read(ctx.SG2.text)
             ctx.Node.Dict["formsetguid"] = KV(ctx.SG2.text, FormSetGuid)
+            FormSetGuid = self.guidDefinition().Guid
+            ctx.Node.Dict["formsetguid"] = KV(self.PreProcessDB.GetGuidKey(FormSetGuid), FormSetGuid)
             if ctx.NF2 != None:
                 FId = self.TransNum(ctx.NF2.text)
             else:
@@ -1789,8 +1822,8 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
         self.visitChildren(ctx)
 
         RiObj.SetLineNo(ctx.start.line)
-        Guid = self.PreProcessDB.Read(ctx.S.text)
-        ctx.Node.Dict["refreshguid"] = KV(ctx.S.text, Guid)
+        Guid = ctx.guidDefinition().Guid
+        ctx.Node.Dict["refreshguid"] = KV(self.PreProcessDB.GetGuidKey(Guid), Guid)
         RiObj.SetRefreshEventGroutId(Guid)
         ctx.Node.Data = RiObj
         ctx.Node.Buffer = gFormPkg.StructToStream(RiObj.GetInfo())
@@ -3850,8 +3883,8 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
             GuidObj.SetFieldList(Ctx.FName, Ctx.TFValue)
 
         GuidObj.SetLineNo(Line)
-        Guid = self.PreProcessDB.Read(ctx.S.text)
-        ctx.Node.Dict["guid"] = KV(ctx.S.text, Guid)
+        Guid = ctx.guidDefinition().Guid
+        ctx.Node.Dict["guid"] = KV(self.PreProcessDB.GetGuidKey(Guid), Guid)
         GuidObj.SetGuid(Guid)
         if ctx.TypeName != "":
             GuidObj.SetData(ctx.Buffer)
@@ -4321,10 +4354,10 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
         self.visitChildren(ctx)
 
         Line = ctx.start.line
-        Guid = self.PreProcessDB.Read(ctx.S.text)
+        Guid = ctx.guidDefinition().Guid
         M2Obj = IfrMatch2(Line, Guid)
         Node = IfrTreeNode(EFI_IFR_MATCH2_OP, M2Obj, gFormPkg.StructToStream(M2Obj.GetInfo()))
-        Node.Dict["guid"] = KV(ctx.S.text, Guid)
+        Node.Dict["guid"] = KV(self.PreProcessDB.GetGuidKey(Guid), Guid)
         ctx.Nodes.append(Node)
         ctx.ExpInfo.ExpOpCount += 1
 
@@ -4746,8 +4779,9 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
         self.visitChildren(ctx)
         SObj = IfrSecurity(Line)
         self.SaveOpHdrCond(SObj.GetHeader(), (ctx.ExpInfo.ExpOpCount == 0), Line)
-        Guid = self.PreProcessDB.Read(ctx.S.text)
-        ctx.Node.Dict["guid"] = KV(ctx.S.text, Guid)
+        Guid = ctx.guidDefinition().Guid
+        ctx.Node.Dict["guid"] = KV(self.PreProcessDB.GetGuidKey(Guid), Guid)
+
         SObj.SetPermissions(Guid)
         ctx.Node.Data = SObj
         ctx.ExpInfo.ExpOpCount += 1
@@ -4952,7 +4986,7 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
 
         if ctx.Uuid() != None:
             Type = 0x3
-            Guid = self.PreProcessDB.Read(ctx.S2.text)
+            Guid = ctx.guidDefinition().Guid
 
         if Type == 0x1:
             QR2Obj = IfrQuestionRef2(Line)
@@ -4974,7 +5008,7 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
             QR3_3Obj.SetDevicePath(DevicePath)
             QR3_3Obj.SetGuid(Guid)
             Node = IfrTreeNode(EFI_IFR_QUESTION_REF3_OP, QR3_3Obj)
-            Node.Dict["devicepath"] = KV(ctx.S2.text, Guid)
+            Node.Dict["devicepath"] = KV(self.PreProcessDB.GetGuidKey(Guid), Guid)
             ctx.Nodes.append(Node)
 
         ctx.ExpInfo.ExpOpCount += 1

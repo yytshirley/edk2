@@ -18,6 +18,7 @@ class Options:
 
         self.ModuleName = None
         self.Workspace = None
+        self.VFRPP = None
         self.InputFileName = None
         self.BaseFileName = None
         self.IncludePaths = []
@@ -30,7 +31,8 @@ class Options:
         self.COutputFileName = None
         self.SkipCPreprocessor = True
         self.CPreprocessorOptions = None
-        self.PreprocessorOutputFileName = None
+        self.CProcessedVfrFileName = None
+        self.PyProcessedVfrFileName = None
         self.HasOverrideClassGuid = False
         self.OverrideClassGuid = None
         self.WarningAsError = False
@@ -48,7 +50,6 @@ class Options:
         self.YamlOutputFileName = None  #
 
         # for test
-        self.ProcessedVfrFileName = None  # for test
         # self.ExpandedHeaderFileName = None # save header info for yaml
         self.ProcessedYAMLFileName = None  # for test
 
@@ -73,9 +74,12 @@ class PreProcessDB:
 
     def Preprocess(self):
         self.HeaderFiles = self._ExtractHeaderFiles()
-        self.HeaderDict = self._GetHeaderDicts(self.HeaderFiles)  # Read Guid definitions in Header files
-        self.UniDict, self.UniDisPlayDict = self._GetUniDicts()  # Read Uni string token/id definitions in StrDef.h file
-        self.VfrDict = self._GetVfrDicts()  # Read definitions in source file
+        # Read Guid definitions in Header files
+        self.HeaderDict = self._GetHeaderDicts(self.HeaderFiles)
+        # Read Uni string token/id definitions in StrDef.h file
+        self.UniDict, self.UniDisPlayDict = self._GetUniDicts()
+        # Read definitions in vfr file
+        self.VfrDict = self._GetVfrDicts()
         self.Preprocessed = True
 
     def TransValue(self, Value):
@@ -83,8 +87,8 @@ class PreProcessDB:
             return Value
         else:
             StrValue = str(Value)
-            if StrValue.isdigit() or StrValue.startswith("0x") or StrValue.startswith("0X"):
-                return int(StrValue, 0)
+            if self._IsDigit(StrValue):
+                return self._ToDigit(StrValue)
             else:
                 GuidList = re.findall(r"0x[0-9a-fA-F]+", StrValue)
                 GuidList = [int(num, 16) for num in GuidList]
@@ -92,19 +96,6 @@ class PreProcessDB:
                 Guid.from_list(GuidList)
                 return Guid
         # error handle , value is too large to store
-
-    def DisplayValue(self, Value, Flag=False):
-        if type(Value) == EFI_GUID:
-            return Value.to_string()
-        else:
-            StrValue = str(Value)
-            if StrValue.isdigit() or StrValue.startswith("0x") or StrValue.startswith("0X"):
-                if Flag:
-                    return "STRING_TOKEN" + "(" + StrValue + ")"
-                else:
-                    return int(StrValue, 0)
-
-            return StrValue
 
     def RevertValue(self, Value) -> str:
         if type(Value) == EFI_GUID:
@@ -116,31 +107,33 @@ class PreProcessDB:
                 StrValue = str(Value)
         return StrValue
 
-    def Read(self, Key):
-        if Key in self.UniDict.keys():
-            return self.TransValue(self.UniDict[Key])
-        elif Key in self.HeaderDict.keys():
-            return self.TransValue(self.HeaderDict[Key])
-        elif Key in self.VfrDict.keys():
-            return self.TransValue(self.VfrDict[Key])
-        elif "|" in Key:
-            Items = Key.split("|")
-            NewValue = ""
-            for i in range(0, len(Items)):
-                # get {key:value} dicts from header files
-                if Items[i].strip() in self.HeaderDict.keys():
-                    if type(self.HeaderDict[Items[i].strip()]) == EFI_GUID:
-                        NewValue += self.HeaderDict[Items[i].strip()].to_string()
-                    else:
-                        NewValue += self.HeaderDict[Items[i].strip()]
+    def DisplayValue(self, Value, Flag=False):
+        if type(Value) == EFI_GUID:
+            return Value.to_string()
+        else:
+            StrValue = str(Value)
+            if self._IsDigit(StrValue):
+                if Flag:
+                    return "STRING_TOKEN" + "(" + StrValue + ")"
                 else:
-                    NewValue += Items[i].strip()
-                if i != len(Items) - 1:
-                    NewValue += " | "
-            return NewValue
-        return Key
-        # else:
-        #     EdkLogger.error("VfrCompiler", PARAMETER_INVALID, "Invalid parameter:  %s" % Key, None)
+                    return int(StrValue, 0)
+
+            return StrValue
+
+    def GetKey(self, Value):
+        if type(Value) == EFI_GUID:
+            Value = Value.to_string()
+            if Value in self.UniDict.keys():
+                return self.UniDict[Value]
+            if Value in self.VfrDict.keys():
+                return self.VfrDict[Value]
+            if Value in self.HeaderDict.keys():
+                return self.HeaderDict[Value]
+        else:
+            Value = "0x%04x" % Value
+            if Value in self.UniDict.keys():
+                return self.UniDict[Value]
+        return Value
 
     def _ExtractHeaderFiles(self):
         FileName = self.Options.InputFileName
@@ -198,8 +191,9 @@ class PreProcessDB:
         HeaderDict = {}
         VFRrespPath  = os.path.join(self.Options.OutputDirectory, "vfrpp_resp.txt")
         if os.path.exists(VFRrespPath):
+            print(self.Options.VFRPP)
             Command = [
-                r"C:\Program Files (x86)\Microsoft Visual Studio 14.0\Vc\bin\amd64\cl.exe",
+                rf"{self.Options.VFRPP}",
                 "/showIncludes",
                 f"@{VFRrespPath}",
                 self.Options.InputFileName
@@ -207,7 +201,6 @@ class PreProcessDB:
             try:
                 Process = subprocess.Popen(Command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
                 _, Error = Process.communicate()
-                print(Error)
             except subprocess.CalledProcessError as e:
                 print(f"Error executing command: {e}")
                 EdkLogger.error("VfrCompiler", COMMAND_FAILURE, ' '.join(Command))
@@ -248,13 +241,27 @@ class PreProcessDB:
 
 
     def _GetVfrDicts(self):
-        VfrDict = {"PLATFORM_VARIABLE_ATTRIBUTES": 0x07}
+        VfrDict = {}
         if self.Options.LanuchVfrCompiler:
             FileName = self.Options.InputFileName
-            self._ParseDefines(FileName, VfrDict)
+            self._ParseDefines(FileName, VfrDict, True)
         return VfrDict
 
-    def _ParseDefines(self, FileName, Dict):
+    def _IsDigit(self, String):
+        if String.isdigit():
+            return True
+        elif (String.startswith('0x') or String.startswith('0X')) and all(char in "0123456789ABCDEFabcdef" for char in String[2:]):
+            return True
+        else:
+            return False
+
+    def _ToDigit(self, String):
+        if String.startswith("0x") or String.startswith("0X"):
+            return int(String, 16)
+        else:
+            return int(String)
+
+    def _ParseDefines(self, FileName, Dict, IsVfrDef = False):
         Pattern = r"#define\s+(\w+)\s+(.*?)(?:(?<!\\)\n|$)"
         with open(FileName, "r") as File:
             Content = File.read()
@@ -275,9 +282,21 @@ class PreProcessDB:
                         GuidList = re.findall(r"0x[0-9a-fA-F]+", SubValue)
                         GuidList = [int(num, 16) for num in GuidList]
                         SubValue = EFI_GUID()
-                        SubValue.from_list(GuidList)
-                        # SubValue = SubValue.to_string()
-                    Dict[SubKey] = SubValue
+                        if len(GuidList) == 11:
+                            SubValue.from_list(GuidList)
+
+                    if self.Options.LanuchVfrCompiler:
+                        # GUID is unique, to transfer GUID Parsed Value -> GUID Defined Key.
+                        if IsVfrDef:
+                            # Save def info for yaml generation
+                            Dict[SubKey] = SubValue
+                        # tranfer value to key for yaml generation
+                        SubValue = str(SubValue) if type(SubValue) != EFI_GUID else SubValue.to_string()
+                        if self._IsDigit(SubValue):
+                            SubValue = "0x%04x" % self._ToDigit(SubValue)
+                        Dict[SubValue] = SubKey
+                    elif self.Options.LanuchYamlCompiler:
+                        Dict[SubKey] = SubValue
             else:
                 if Value.find("//") != -1:
                     Value = Value.split("//")[0].strip()
@@ -287,7 +306,17 @@ class PreProcessDB:
                     Value = EFI_GUID()
                     if len(GuidList) == 11:
                         Value.from_list(GuidList)
-                Dict[Key] = Value
+
+                if self.Options.LanuchVfrCompiler:
+                    # GUID is unique, to transfer GUID Parsed Value -> GUID Defined Key.
+                    if IsVfrDef:
+                        Dict[Key] = Value
+                    Value = str(Value) if type(Value) != EFI_GUID else Value.to_string()
+                    if self._IsDigit(Value):
+                        Value = "0x%04x" % self._ToDigit(Value)
+                    Dict[Value] = Key
+                elif self.Options.LanuchYamlCompiler:
+                    Dict[Key] = Value
 
     def _FindIncludeHeaderFile(self, IncludePaths, File):
         Name = File.split("/")[-1]

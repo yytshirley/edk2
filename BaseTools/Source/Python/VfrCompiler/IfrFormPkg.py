@@ -611,6 +611,8 @@ class IfrFormSet(IfrLine, IfrOpHeader):
         self.FormSet.Flags = 0
         self.FormSet.Guid = EFI_GUID(0, 0, 0, GuidArray(0, 0, 0, 0, 0, 0, 0, 0))
 
+        self.ClassGuidNum = 0
+
     def SetGuid(self, Guid):
         self.FormSet.Guid = Guid
 
@@ -638,6 +640,9 @@ class IfrFormSet(IfrLine, IfrOpHeader):
 
     def GetFlags(self):
         return self.FormSet.Flags
+
+    def SetClassGuidNum(self, Num):
+        self.ClassGuidNum = Num
 
     def GetInfo(self):
         return self.FormSet
@@ -768,9 +773,13 @@ class IfrClass(IfrLine, IfrOpHeader):
         self.Class.Class = EFI_NON_DEVICE_CLASS
 
         self.HasSubClass = False
+        self.ClassStr = None
 
     def SetClass(self, Class):
         self.Class.Class = Class
+
+    def SetClassStr(self, ClassStr):
+        self.ClassStr = ClassStr
 
     def GetInfo(self):
         return self.Class
@@ -786,8 +795,13 @@ class IfrSubClass(IfrLine, IfrOpHeader):
         self.SubClass.Guid = EFI_IFR_TIANO_GUID
         self.SubClass.SubClass = EFI_SETUP_APPLICATION_SUBCLASS
 
+        self.SubClassStr = None
+
     def SetSubClass(self, SubClass):
         self.SubClass.SubClass = SubClass
+
+    def SetSubClassStr(self, SubClassStr):
+        self.SubClassStr = SubClassStr
 
     def GetInfo(self):
         return self.SubClass
@@ -872,12 +886,20 @@ class IfrVarStoreEfi(IfrLine, IfrOpHeader):
         self.Type = TypeName
         self.HasVarStoreId = False
         self.AttributesText = None
+        self.NameStringId = None
+        self.VarSize = None
 
     def SetGuid(self, Guid):
         self.VarStoreEfi.Guid = Guid
 
     def SetSize(self, Size):
         self.VarStoreEfi.Size = Size
+
+    def SetNameStringId(self, NameStringId):
+        self.NameStringId = NameStringId
+
+    def SetVarSize(self, VarSize):
+        self.VarSize = VarSize
 
     def SetVarStoreId(self, VarStoreId):
         self.VarStoreEfi.VarStoreId = VarStoreId
@@ -1026,6 +1048,7 @@ class IfrBanner(IfrLine, IfrOpHeader):
         self.Banner.Guid = EFI_IFR_TIANO_GUID
 
         self.HasTimeOut = False
+        self.TimeOut = None
 
     def SetTitle(self, StringId):
         self.Banner.Title = StringId
@@ -1038,6 +1061,9 @@ class IfrBanner(IfrLine, IfrOpHeader):
 
     def SetHasTimeOut(self, HasTimeOut):
         self.HasTimeOut = HasTimeOut
+
+    def SetTimeOut(self, TimeOut):
+        self.TimeOut = TimeOut
 
     def GetInfo(self):
         return self.Banner
@@ -1357,9 +1383,13 @@ class IfrText(IfrLine, IfrOpHeader, IfrStatementHeader):
         IfrOpHeader.__init__(self, self.Text.Header, EFI_IFR_TEXT_OP)
         IfrStatementHeader.__init__(self, self.Text.Statement)
         self.Text.TextTwo = EFI_STRING_ID_INVALID
+        self.HasTextTwo = False
 
     def SetTextTwo(self, StringId):
         self.Text.TextTwo = StringId
+
+    def SetHasTextTwo(self, Flag):
+        self.HasTextTwo = Flag
 
     def GetInfo(self):
         return self.Text
@@ -1587,9 +1617,13 @@ class IfrInconsistentIf(IfrLine, IfrOpHeader):
         self.InconsistentIf = EFI_IFR_INCONSISTENT_IF()
         IfrOpHeader.__init__(self, self.InconsistentIf.Header, EFI_IFR_INCONSISTENT_IF_OP)
         self.InconsistentIf.Error = EFI_STRING_ID_INVALID
+        self.FlagsStream = ""
 
     def SetError(self, Error):
         self.InconsistentIf.Error = Error
+
+    def SetFlagsStream(self, Flag):
+        self.FlagsStream = Flag
 
     def GetInfo(self):
         return self.InconsistentIf
@@ -1614,8 +1648,13 @@ class IfrNoSubmitIf(IfrLine, IfrOpHeader):
         IfrOpHeader.__init__(self, self.NoSubmitIf.Header, EFI_IFR_NO_SUBMIT_IF_OP)
         self.NoSubmitIf.Error = EFI_STRING_ID_INVALID
 
+        self.FlagsStream = ""
+
     def SetError(self, Error):
         self.NoSubmitIf.Error = Error
+
+    def SetFlagsStream(self, Flag):
+        self.FlagsStream = Flag
 
     def GetInfo(self):
         return self.NoSubmitIf
@@ -1744,6 +1783,17 @@ class IfrDate(IfrLine, IfrBaseInfo, IfrOpHeader, IfrQuestionHeader):
         IfrQuestionHeader.__init__(self, self.Date.Question)
         self.Date.Flags = 0
 
+        self.Year = None
+        self.Month = None
+        self.Day = None
+
+        self.D_Year = None
+        self.D_Month = None
+        self.D_Day = None
+        self.Step = None
+        self.Min = None
+        self.Max = None
+
     def SetFlags(self, HFlags, LFlags):
         ReturnCode = IfrQuestionHeader.SetFlags(self, HFlags)
         if ReturnCode != VfrReturnCode.VFR_RETURN_SUCCESS:
@@ -1783,6 +1833,27 @@ class IfrTime(IfrLine, IfrBaseInfo, IfrOpHeader, IfrQuestionHeader):
         IfrOpHeader.__init__(self, self.Time.Header, EFI_IFR_TIME_OP)
         IfrQuestionHeader.__init__(self, self.Time.Question)
         self.Time.Flags = 0
+
+        self.Hour = None
+        self.Minute = None
+        self.Second = None
+
+        self.D_Hour = None
+        self.D_Minute = None
+        self.D_Second = None
+
+        self.Step = None
+        self.Min = None
+        self.Max = None
+
+    def SetHour(self, Hour):
+        self.Hour = Hour
+
+    def SetMinute(self, Minute):
+        self.Minute = Minute
+
+    def SetSecond(self, Second):
+        self.Second = Second
 
     def SetFlags(self, HFlags, LFlags):
         ReturnCode = IfrQuestionHeader.SetFlags(self, HFlags)

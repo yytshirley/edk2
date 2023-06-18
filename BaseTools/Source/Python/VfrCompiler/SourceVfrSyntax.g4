@@ -12,7 +12,7 @@ from VfrCompiler.IfrPreProcess import *
 }
 
 vfrProgram
-    :   vfrHeader vfrFormSetDefinition?
+    :   vfrHeader vfrFormSetDefinition
     ;
 
 vfrHeader
@@ -68,63 +68,63 @@ vfrDataStructFields[FieldInUnion]
     ;
 
 dataStructField64[FieldInUnion]
-    :   'UINT64' N=StringIdentifier ('[' Number ']')? ';'
+    :   'UINT64' N=StringIdentifier ('[' Number | MatchChar ']')? ';'
     ;
 
 dataStructField32[FieldInUnion]
-    :   'UINT32' N=StringIdentifier ('[' Number ']')? ';'
+    :   'UINT32' N=StringIdentifier ('[' Number | MatchChar ']')? ';'
     ;
 
 dataStructField16[FieldInUnion]
-    :   'UINT16' N=StringIdentifier ('[' Number ']')? ';'
+    :   'UINT16' N=StringIdentifier ('[' Number | MatchChar ']')? ';'
     ;
 
 dataStructField8[FieldInUnion]
-    :   'UINT8' N=StringIdentifier ('[' Number ']')? ';'
+    :   'UINT8' N=StringIdentifier ('[' Number | MatchChar ']')? ';'
     ;
 
 dataStructFieldBool[FieldInUnion]
-    :   'BOOLEAN' N=StringIdentifier ('[' Number ']')? ';'
+    :   'BOOLEAN' N=StringIdentifier ('[' Number | MatchChar ']')? ';'
     ;
 
 dataStructFieldString[FieldInUnion]
-    :   'EFI_STRING_ID' N=StringIdentifier ('[' Number ']')? ';'
+    :   'EFI_STRING_ID' N=StringIdentifier ('[' Number | MatchChar ']')? ';'
     ;
 
 dataStructFieldDate[FieldInUnion]
-    :   'EFI_HII_DATE' N=StringIdentifier ('[' Number ']')? ';'
+    :   'EFI_HII_DATE' N=StringIdentifier ('[' Number | MatchChar ']')? ';'
     ;
 
 dataStructFieldTime[FieldInUnion]
-    :   'EFI_HII_TIME' N=StringIdentifier ('[' Number ']')? ';'
+    :   'EFI_HII_TIME' N=StringIdentifier ('[' Number | MatchChar ']')? ';'
     ;
 
 dataStructFieldRef[FieldInUnion]
-    :   'EFI_HII_REF' N=StringIdentifier ('[' Number ']')? ';'
+    :   'EFI_HII_REF' N=StringIdentifier ('[' Number | MatchChar ']')? ';'
     ;
 
 dataStructFieldUser[FieldInUnion]
-    :   T=StringIdentifier N=StringIdentifier ('[' Number ']')? ';'
+    :   T=StringIdentifier N=StringIdentifier ('[' Number | MatchChar ']')? ';'
     ;
 
 dataStructBitField64[FieldInUnion]
-    :   D='UINT64'  N=StringIdentifier? ':' Number ';'
+    :   D='UINT64'  N=StringIdentifier? ':' Number | MatchChar ';'
     ;
 dataStructBitField32[FieldInUnion]
-    :   D='UINT32' N=StringIdentifier? ':' Number ';'
+    :   D='UINT32' N=StringIdentifier? ':' Number  | MatchChar ';'
     ;
 dataStructBitField16[FieldInUnion]
-    :   D='UINT16' N=StringIdentifier? ':' Number ';'
+    :   D='UINT16' N=StringIdentifier? ':' Number | MatchChar ';'
     ;
 dataStructBitField8[FieldInUnion]
-    :   D='UINT8' N=StringIdentifier? ':' Number ';'
+    :   D='UINT8' N=StringIdentifier? ':' Number | MatchChar ';'
     ;
 
 // VFR FormSet Definition
 vfrFormSetDefinition
 locals[Node=IfrTreeNode(EFI_IFR_FORM_SET_OP)]
     :   'formset'
-        'guid' '=' S1=StringIdentifier ','
+        'guid' '=' S1=guidDefinition ','
         'title' '=' 'STRING_TOKEN' '(' S2=StringIdentifier ')' ','
         'help' '=' 'STRING_TOKEN' '(' S3=StringIdentifier ')' ','
         ('classguid' '=' classguidDefinition[localctx.Node] ',')?
@@ -136,7 +136,22 @@ locals[Node=IfrTreeNode(EFI_IFR_FORM_SET_OP)]
 
 classguidDefinition[Node]
 locals[GuidList=[]]
-    :   StringIdentifier ('|' StringIdentifier)? ('|' StringIdentifier)?('|' StringIdentifier)?
+    :   guidDefinition ('|' guidDefinition)? ('|' guidDefinition)?('|' guidDefinition)?
+    ;
+
+guidSubDefinition[Guid]
+    :   Number ',' Number ',' Number ',' Number ','
+        Number ',' Number ',' Number ',' Number
+    ;
+
+guidDefinition
+locals[Guid=EFI_GUID()]
+    :   '{'
+        Number ',' Number ',' Number ','
+        (   '{' guidSubDefinition[localctx.Guid] '}'
+        |   guidSubDefinition[localctx.Guid]
+        )
+        '}'
     ;
 
 classDefinition
@@ -213,7 +228,7 @@ locals[Node=IfrTreeNode(EFI_IFR_VARSTORE_OP)]
         )
         ('varid' '=' (ID=Number | S=StringIdentifier) ',')?
         'name' '=' SN=StringIdentifier ','
-        'guid' '=' SG=StringIdentifier ';'
+        'guid' '=' guidDefinition ';'
     ;
 
 vfrStatementVarStoreEfi
@@ -233,7 +248,7 @@ locals[Node=IfrTreeNode(EFI_IFR_VARSTORE_EFI_OP)]
         (   'name' '=' SN=StringIdentifier ','
         |   'name' '=' 'STRING_TOKEN' '(' VN=StringIdentifier ')' ','  'varsize' '=' (N=Number | S2=StringIdentifier)  ','
         )
-        'guid' '=' SG=StringIdentifier ';'
+        'guid' '=' guidDefinition ';'
     ;
 
 vfrVarStoreEfiAttr
@@ -246,7 +261,7 @@ locals[Node=IfrTreeNode(EFI_IFR_VARSTORE_NAME_VALUE_OP)]
     :   'namevaluevarstore' SN=StringIdentifier ','
         ('varid' '=' (ID=Number | SID=StringIdentifier)  ',')?
         ('name' '=' 'STRING_TOKEN' '(' SN2=StringIdentifier ')' ',')+
-        'guid' '=' SG=StringIdentifier ';'
+        'guid' '=' guidDefinition ';'
     ;
 
 vfrStatementDisableIfFormSet
@@ -314,7 +329,7 @@ locals[ValueList=[], ListType=False]
     |   ('-')? Number
     |   Number ':' Number ':' Number
     |   Number '/' Number '/' Number
-    |   Number ';' Number ';' S2=StringIdentifier ';' 'STRING_TOKEN' '(' S3=StringIdentifier ')'
+    |   Number ';' Number ';' S2=guidDefinition ';' 'STRING_TOKEN' '(' S3=StringIdentifier ')'
     |   'STRING_TOKEN' '(' S4=StringIdentifier ')'
     |   '{' Number (',' Number)* '}'
     ;
@@ -369,7 +384,7 @@ vfrFormMapDefinition
 locals[Node=IfrTreeNode(EFI_IFR_FORM_MAP_OP)]
     :   'formmap' 'formid' '=' (N=Number| S=StringIdentifier)  ','
         (   'maptitle' '=' 'STRING_TOKEN' '(' SM=StringIdentifier ')' ';'
-            'mapguid' '=' SG=StringIdentifier ';'
+            'mapguid' '=' guidDefinition ';'
         )*
         (vfrForm)*
         'endform' ';'
@@ -455,12 +470,12 @@ vfrStatementGoto
 locals[Node=IfrTreeNode(EFI_IFR_REF_OP), QType=EFI_QUESION_TYPE.QUESTION_REF]
     :   'goto'
         (   (   DevicePath '=' 'STRING_TOKEN' '(' S=StringIdentifier ')' ','
-                FormSetGuid '=' SG1=StringIdentifier ','
+                FormSetGuid '=' SG1=guidDefinition ','
                 FormId '=' (NF1=Number | SF1=StringIdentifier)  ','
                 Question '=' (NQ1=Number | SQ1=StringIdentifier) ','
             )
             |
-            (   FormSetGuid '=' SG2=StringIdentifier ','
+            (   FormSetGuid '=' SG2=guidDefinition ','
                 FormId '=' (NF2=Number | SF2=StringIdentifier)  ','
                 Question '=' (NQ2=Number | SQ2=StringIdentifier) ','
             )
@@ -556,7 +571,7 @@ locals[Node=IfrTreeNode(EFI_IFR_VARSTORE_DEVICE_OP)]
 
 vfrStatementRefreshEvent
 locals[Node=IfrTreeNode(EFI_IFR_REFRESH_ID_OP)]
-    :   'refreshguid' '=' S=StringIdentifier ','
+    :   'refreshguid' '=' guidDefinition ','
     ;
 
 vfrStatementWarningIf
@@ -1121,7 +1136,7 @@ locals[Node=IfrTreeNode(EFI_IFR_GUID_OP)]
 vfrStatementExtension
 locals[Node=IfrTreeNode(EFI_IFR_GUID_OP), Buffer=[], Size=0, TypeName='', TypeSize=0, IsStruct=False, ArrayNum=0]
     :   'guidop'
-        'guid' '=' S=StringIdentifier
+        'guid' '=' guidDefinition
         (   ',' D='datatype' '='
             (   'UINT64' ('[' Number ']')?
             |   'UINT32' ('[' Number ']')?
@@ -1310,7 +1325,7 @@ locals[Nodes=[]]
     :   'match2'
         '(' vfrStatementExpressionSub[localctx.Nodes] ','
         vfrStatementExpressionSub[localctx.Nodes]  ','
-        S=StringIdentifier ')'
+       guidDefinition ')'
     ;
 
 vfrExpressionParen[ExpInfo]
@@ -1417,7 +1432,7 @@ locals[Node=IfrTreeNode(EFI_IFR_THIS_OP)]
 
 securityExp[ExpInfo]
 locals[Node=IfrTreeNode(EFI_IFR_SECURITY_OP)]
-    :   'security' '(' S=StringIdentifier ')'
+    :   'security' '(' guidDefinition ')'
     ;
 
 numericVarStoreType
@@ -1475,7 +1490,7 @@ locals[Nodes=[]]
     :   'questionrefval'
         '('
         (DevicePath '=' 'STRING_TOKEN' '(' S=StringIdentifier ')' ',' )?
-        (Uuid '=' S2=StringIdentifier ',' )?
+        (Uuid '=' guidDefinition ',' )?
         vfrStatementExpressionSub[localctx.Nodes]
         ')'
     ;
@@ -1878,10 +1893,14 @@ StringIdentifier
     :   [A-Za-z_][A-Za-z_0-9]*
     ;
 
-// ComplexDefine
-//     :   '#' Whitespace? 'define'  ~[#\r\n]*
-//         -> skip
-//     ;
+MatchChar
+    :   ~[;\]]
+    ;
+
+ComplexDefine
+    :   '#' Whitespace? 'define'  ~[#\r\n]*
+        -> skip
+    ;
 
 LineDefinition
     :   '#' Whitespace? 'line'  ~[#\r\n]*
@@ -1899,25 +1918,10 @@ Whitespace
         -> skip
     ;
 
-GuidSubDefinition
-    :   Number ',' Number ',' Number ',' Number ','
-        Number ',' Number ',' Number ',' Number
-    ;
-
-GuidDefinition
-    :   '{'
-        Number ',' Number ',' Number ','
-        (   '{' GuidSubDefinition '}'
-        |   GuidSubDefinition
-        )
-        '}'
-        ->skip
-    ;
-
-Comment
-    :   '/*' .*? '*/'
-        -> skip
-    ;
+// Comment
+//     :   '/*' .*? '*/'
+//         -> skip
+//     ;
 
 Newline
     :   (   '\r' '\n'?
@@ -1926,9 +1930,9 @@ Newline
         -> skip
     ;
 
-DefLine
-    :   '#' Whitespace? 'define' ~[#\\\r\n]* ('\\' '\r'? '\n' ~[#\\\r\n]*)* -> skip
-    ;
+// DefLine
+//     :   '#' Whitespace? 'define' ~[#\\\r\n]* ('\\' '\r'? '\n' ~[#\\\r\n]*)* -> skip
+//     ;
 
 LineComment
     :   '//' ~[\r\n]*
@@ -1941,21 +1945,6 @@ Extern
         -> skip
     ;
 
-If
-    : '#' Whitespace? 'if' ~[#\r\n]*
-        ->skip
-    ;
-
-Else
-    :  '#' Whitespace? 'else' ~[#\r\n]*
-        ->skip
-    ;
-
-Endif
-    :  '#' Whitespace? 'endif' ~[#\r\n]*
-        ->skip
-    ;
-
-EndLine
-    : '\\' -> skip
-    ;
+// EndLine
+//     : '\\' -> skip
+//     ;

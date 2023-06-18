@@ -26,12 +26,12 @@ else:
 # This class defines a complete generic visitor for a parse tree produced by VfrSyntaxParser.
 class VfrSyntaxVisitor(ParseTreeVisitor):
 
-    def __init__(self, Root=None, OverrideClassGuid=None):
-        if Root == None:
-            self.Root = IfrTreeNode()
-        else:
-            self.Root = Root
+    def __init__(self, PreProcessDB: PreProcessDB = None, Root=None, OverrideClassGuid=None, QuestionDB: VfrQuestionDB = None):
+        self.Root = Root if Root != None else IfrTreeNode()
+        self.PreProcessDB = PreProcessDB
         self.OverrideClassGuid = OverrideClassGuid
+        self.VfrQuestionDB = QuestionDB if QuestionDB != None else VfrQuestionDB()
+
         self.ParserStatus = 0
 
         self.Value = None
@@ -45,7 +45,6 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         self.VfrRulesDB = VfrRulesDB()
         self.CurrQestVarInfo = EFI_VARSTORE_INFO()
 
-        self.VfrQuestionDB = VfrQuestionDB()
         self.CurrentQuestion = None
         self.CurrentMinMaxData = None
 
@@ -55,12 +54,11 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         self.NeedAdjustOpcode = False
 
 
+
     # Visit a parse tree produced by VfrSyntaxParser#vfrProgram.
     def visitVfrProgram(self, ctx:VfrSyntaxParser.VfrProgramContext):
         #self.VfrQuestionDB.PrintAllQuestion('Questions.txt')
-        self.visitChildren(ctx)
-        gFormPkg.BuildPkg(self.Root)
-        return self.Root
+        return self.visitChildren(ctx)
 
     # Visit a parse tree produced by VfrSyntaxParser#pragmaPackShowDef.
     def visitPragmaPackShowDef(self, ctx:VfrSyntaxParser.PragmaPackShowDefContext):
@@ -363,6 +361,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         FSObj.SetGuid(ctx.guidDefinition().Guid)
         FSObj.SetFormSetTitle(self.TransNum(ctx.Number(0)))
         FSObj.SetHelp(self.TransNum(ctx.Number(1)))
+        FSObj.SetClassGuidNum(len(GuidList))
 
         ctx.Node.Data = FSObj
         ctx.Node.Buffer = gFormPkg.StructToStream(FSObj.GetInfo())
@@ -390,6 +389,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 InsertNode = IfrTreeNode(InsertOpCode.OpCode, InsertOpCode.Data, gFormPkg.StructToStream(InsertOpCode.Data.GetInfo()))
                 self.LastFormNode.insertChild(InsertNode)
 
+        gFormPkg.BuildPkg(self.Root)
         return ctx.Node
 
     # Visit a parse tree produced by VfrSyntaxParser#classguidDefinition.
@@ -412,6 +412,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         Line = ctx.start.line
         CObj.SetLineNo(Line)
         CObj.SetClass(Class)
+        CObj.SetClassStr(self.ExtractOriginalText(ctx))
         ctx.Node.Data = CObj
         ctx.Node.Buffer = gFormPkg.StructToStream(CObj.GetInfo())
 
@@ -464,6 +465,8 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             SubClass = self.TransNum(ctx.Number())
 
         SubObj.SetSubClass(SubClass)
+        SubObj.SetSubClassStr(self.ExtractOriginalText(ctx))
+
         ctx.Node.Data = SubObj
         ctx.Node.Buffer = gFormPkg.StructToStream(SubObj.GetInfo())
 
@@ -511,12 +514,13 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         self.visitChildren(ctx)
 
         RefName = ctx.N.text
+        DSObj = IfrDefaultStore(RefName)
         DefaultStoreNameId = self.TransNum(ctx.S.text)
-
         DefaultId = EFI_HII_DEFAULT_CLASS_STANDARD if ctx.Attribute()== None else self.TransNum(ctx.A.text)
+        if ctx.Attribute() != None:
+            DSObj.HasAttr = True
 
         if gVfrDefaultStore.DefaultIdRegistered(DefaultId) == False:
-            DSObj = IfrDefaultStore(RefName)
             self.ErrorHandler(gVfrDefaultStore.RegisterDefaultStore(DSObj.DefaultStore, RefName, DefaultStoreNameId, DefaultId), Line)
             DSObj.SetDefaultName(DefaultStoreNameId)
             DSObj.SetDefaultId (DefaultId)
@@ -526,7 +530,10 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         else:
             pNode, ReturnCode = gVfrDefaultStore.ReRegisterDefaultStoreById(DefaultId, RefName, DefaultStoreNameId)
             self.ErrorHandler(ReturnCode, Line)
-            ctx.Node = None
+            ctx.Node.OpCode = EFI_IFR_SHOWN_DEFAULTSTORE_OP  # For display in YAML
+            DSObj.SetDefaultId(DefaultId)
+            DSObj.SetDefaultName(DefaultStoreNameId)
+            ctx.Node.Data = DSObj
         return ctx.Node
 
 
@@ -581,6 +588,8 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         VarStoreId = EFI_VARSTORE_ID_INVALID
         IsUEFI23EfiVarstore = True
         ReturnCode = None
+        NameStringId = None
+        VarSize = None
 
         TypeName = str(ctx.getChild(1))
 
@@ -644,6 +653,9 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         VSEObj.SetSize(Size)
         VSEObj.SetAttributes(Attributes)
         VSEObj.SetAttributesText(AttributesText)
+        VSEObj.SetNameStringId(NameStringId)
+        VSEObj.SetVarSize(VarSize)
+
 
         ctx.Node.Data = VSEObj
         ctx.Node.Buffer = gFormPkg.StructToStream(VSEObj.GetInfo())
@@ -706,8 +718,8 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         DIObj.SetLineNo(ctx.start.line)
         self.ConstantOnlyInExpression = True
         ctx.Node.Data = DIObj
-        Condition = 'disableif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
-        ctx.Node.Condition = Condition
+        # ctx.Node.Condition = 'disableif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
         self.visitChildren(ctx)
         self.InsertEndNode(ctx.Node, ctx.stop.line)
 
@@ -719,8 +731,8 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         SIObj = IfrSuppressIf()
         SIObj.SetLineNo(ctx.start.line)
         ctx.Node.Data = SIObj
-        Condition = 'suppressif' + ' ' +  self.ExtractOriginalText(ctx.vfrStatementExpression())
-        ctx.Node.Condition = Condition
+        # ctx.Node.Condition = 'suppressif' + ' ' +  self.ExtractOriginalText(ctx.vfrStatementExpression())
+        ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
         self.visitChildren(ctx)
         self.InsertEndNode(ctx.Node, ctx.stop.line)
         return ctx.Node
@@ -1361,6 +1373,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             TObj.SetHelp(Help)
             TObj.SetPrompt(Prompt)
             TObj.SetTextTwo(TxtTwo)
+            TObj.SetHasTextTwo(True)
             ctx.Node.Data = TObj
             ctx.Node.Buffer = gFormPkg.StructToStream(TObj.GetInfo())
 
@@ -1572,11 +1585,19 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementInconsistentIf.
     def visitVfrStatementInconsistentIf(self, ctx:VfrSyntaxParser.VfrStatementInconsistentIfContext):
 
-        IIObj = IfrInconsistentIf2()
+        IIObj = IfrInconsistentIf()
         self.visitChildren(ctx)
 
         IIObj.SetLineNo(ctx.start.line)
         IIObj.SetError(self.TransNum(ctx.Number()))
+
+        if ctx.FLAGS() != None:
+            Flags = ""
+            for i in range(0, len(ctx.flagsField())):
+                Flags += self.ExtractOriginalText(ctx.flagsField(i))
+                if i != len(ctx.flagsField()) - 1:
+                    Flags += " | "
+            IIObj.SetFlagsStream(Flags)
 
         ctx.Node.Data = IIObj
         ctx.Node.Buffer = gFormPkg.StructToStream(IIObj.GetInfo())
@@ -1593,6 +1614,14 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
         NSIObj.SetLineNo(ctx.start.line)
         NSIObj.SetError(self.TransNum(ctx.Number()))
+        if ctx.FLAGS() != None:
+            Flags = ""
+            for i in range(0, len(ctx.flagsField())):
+                Flags += self.ExtractOriginalText(ctx.flagsField(i))
+                if i != len(ctx.flagsField()) - 1:
+                    Flags += " | "
+            NSIObj.SetFlagsStream(Flags)
+
         ctx.Node.Data = NSIObj
         ctx.Node.Buffer = gFormPkg.StructToStream(NSIObj.GetInfo())
         ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
@@ -1609,8 +1638,8 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         DIObj.SetLineNo(ctx.start.line)
         ctx.Node.Data = DIObj
         ctx.Node.Buffer = gFormPkg.StructToStream(DIObj.GetInfo())
-        ctx.Node.Condition = 'disableif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
-        #ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
+        # ctx.Node.Condition = 'disableif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
         self.InsertEndNode(ctx.Node, ctx.stop.line)
 
         return ctx.Node
@@ -1711,7 +1740,8 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         SIObj = IfrSuppressIf()
         SIObj.SetLineNo(ctx.start.line)
         ctx.Node.Data = SIObj
-        ctx.Node.Condition = 'suppressif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        # ctx.Node.Condition = 'suppressif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
         self.visitChildren(ctx)
         ctx.Node.Buffer = gFormPkg.StructToStream(SIObj.GetInfo())
         self.InsertEndNode(ctx.Node, ctx.stop.line)
@@ -1723,7 +1753,8 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         GOIObj = IfrGrayOutIf()
         GOIObj.SetLineNo(ctx.start.line)
         ctx.Node.Data = GOIObj
-        ctx.Node.Condition = 'grayoutif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        # ctx.Node.Condition = 'grayoutif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
         self.visitChildren(ctx)
         ctx.Node.Buffer = gFormPkg.StructToStream(GOIObj.GetInfo())
         self.InsertEndNode(ctx.Node, ctx.stop.line)
@@ -2892,13 +2923,19 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             Year += '.'
             Year += self.TransId(ctx.StringIdentifier(1))
 
+            DObj.Year = Year
+
             Month = self.TransId(ctx.StringIdentifier(2))
             Month += '.'
             Month += self.TransId(ctx.StringIdentifier(3))
 
+            DObj.Month = Month
+
             Day = self.TransId(ctx.StringIdentifier(4))
             Day += '.'
             Day += self.TransId(ctx.StringIdentifier(5))
+
+            DObj.Day = Day
 
             if ctx.FLAGS() != None:
                 DObj.SetFlagsStream(self.ExtractOriginalText(ctx.vfrDateFlags()))
@@ -2910,7 +2947,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             DObj.SetPrompt(self.TransNum(ctx.Number(0)))
             DObj.SetHelp(self.TransNum(ctx.Number(1)))
 
-            DefaultObj = IfrDefault(EFI_IFR_TYPE_DATE, [ctx.Val], EFI_HII_DEFAULT_CLASS_STANDARD, ctx.Val, EFI_IFR_TYPE_DATE)
+            DefaultObj = IfrDefault(EFI_IFR_TYPE_DATE, [ctx.Val], EFI_HII_DEFAULT_CLASS_STANDARD, EFI_IFR_TYPE_DATE)
             DefaultObj.SetLineNo(Line)
             DefaultNode = IfrTreeNode(EFI_IFR_DEFAULT_OP, DefaultObj, gFormPkg.StructToStream(DefaultObj.GetInfo()))
             ctx.Node.insertChild(DefaultNode)
@@ -2924,20 +2961,26 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#minMaxDateStepDefault.
     def visitMinMaxDateStepDefault(self, ctx:VfrSyntaxParser.MinMaxDateStepDefaultContext):
-
+        Minimum = self.TransNum(ctx.Number(0))
+        ctx.Node.Data.Min = Minimum
+        Maximum = self.TransNum(ctx.Number(1))
+        ctx.Node.Data.Max = Maximum
+        if ctx.Step() != None:
+            ctx.Node.Data.Step = self.TransNum(ctx.Number(2))
         if ctx.Default() != None:
-            Minimum = self.TransNum(ctx.Number(0))
-            Maximum = self.TransNum(ctx.Number(1))
             if ctx.KeyValue == 0:
                 ctx.Date.Year = self.TransNum(ctx.N.text)
+                ctx.Node.Data.D_Year = ctx.Date.Year
                 if ctx.Date.Year < Minimum or ctx.Date.Year > Maximum:
                     self.ErrorHandler(VfrReturnCode.VFR_RETURN_INVALID_PARAMETER, ctx.N.line, "Year default value must be between Min year and Max year.")
             if ctx.KeyValue == 1:
                 ctx.Date.Month = self.TransNum(ctx.N.text)
+                ctx.Node.Data.D_Month = ctx.Date.Month
                 if ctx.Date.Month < 1 or ctx.Date.Month > 12:
                     self.ErrorHandler(VfrReturnCode.VFR_RETURN_INVALID_PARAMETER, ctx.D.line, "Month default value must be between Min 1 and Max 12.")
             if ctx.KeyValue == 2:
                 ctx.Date.Day = self.TransNum(ctx.N.text)
+                ctx.Node.Data.D_Day = ctx.Date.Day
                 if ctx.Date.Day < 1 or ctx.Date.Day > 31:
                     self.ErrorHandler(VfrReturnCode.VFR_RETURN_INVALID_PARAMETER, ctx.D.line, "Day default value must be between Min 1 and Max 31.")
         return self.visitChildren(ctx)
@@ -3001,13 +3044,19 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             Hour += '.'
             Hour += self.TransId(ctx.StringIdentifier(1))
 
+            TObj.SetHour(Hour)
+
             Minute = self.TransId(ctx.StringIdentifier(2))
             Minute += '.'
             Minute += self.TransId(ctx.StringIdentifier(3))
 
+            TObj.SetMinute(Minute)
+
             Second = self.TransId(ctx.StringIdentifier(4))
             Second += '.'
             Second += self.TransId(ctx.StringIdentifier(5))
+
+            TObj.SetSecond(Second)
 
             if ctx.FLAGS() != None:
                 TObj.SetFlagsStream(self.ExtractOriginalText(ctx.vfrTimeFlags()))
@@ -3023,6 +3072,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             DefaultObj.SetLineNo(Line)
             DefaultNode = IfrTreeNode(EFI_IFR_DEFAULT_OP, DefaultObj, gFormPkg.StructToStream(DefaultObj.GetInfo()))
             ctx.Node.insertChild(DefaultNode)
+            print(self.PreProcessDB.Options.InputFileName)
 
         ctx.Node.Buffer = gFormPkg.StructToStream(TObj.GetInfo())
         for Ctx in ctx.vfrStatementInconsistentIf():
@@ -3033,20 +3083,24 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#minMaxTimeStepDefault.
     def visitMinMaxTimeStepDefault(self, ctx:VfrSyntaxParser.MinMaxTimeStepDefaultContext):
-
+        ctx.Node.Data.Min = self.TransNum(ctx.Number(0))
+        ctx.Node.Data.Max = self.TransNum(ctx.Number(1))
+        if ctx.Step() != None:
+            ctx.Node.Data.Step = self.TransNum(ctx.Number(2))
         if ctx.Default() != None:
-            Minimum = self.TransNum(ctx.Number(0))
-            Maximum = self.TransNum(ctx.Number(1))
             if ctx.KeyValue == 0:
                 ctx.Time.Hour = self.TransNum(ctx.Number(len(ctx.Number())-1))
+                ctx.Node.Data.D_Hour = ctx.Time.Hour
                 if ctx.Time.Hour > 23:
                     self.ErrorHandler(VfrReturnCode.VFR_RETURN_INVALID_PARAMETER, ctx.N.line, "Hour default value must be between 0 and 23.")
             if ctx.KeyValue == 1:
                 ctx.Time.Minute = self.TransNum(ctx.Number(len(ctx.Number())-1))
+                ctx.Node.Data.D_Minute = ctx.Time.Minute
                 if ctx.Time.Minute > 59:
                     self.ErrorHandler(VfrReturnCode.VFR_RETURN_INVALID_PARAMETER, ctx.N.line, "Minute default value must be between 0 and 59.")
             if ctx.KeyValue == 2:
                 ctx.Time.Second = self.TransNum(ctx.Number(len(ctx.Number())-1))
+                ctx.Node.Data.D_Second = ctx.Time.Second
                 if ctx.Time.Second > 59:
                     self.ErrorHandler(VfrReturnCode.VFR_RETURN_INVALID_PARAMETER, ctx.N.line, "Second default value must be between 0 and 59.")
         return self.visitChildren(ctx)
@@ -3151,7 +3205,8 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         DIObj.SetLineNo(ctx.start.line)
         ctx.Node.Data = DIObj
         ctx.Node.Buffer = gFormPkg.StructToStream(DIObj.GetInfo())
-        ctx.Node.Condition = 'disableif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        # ctx.Node.Condition = 'disableif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
         self.visitChildren(ctx)
         for Ctx in ctx.vfrStatementStatList():
             self.InsertChild(ctx.Node, Ctx)
@@ -3167,7 +3222,8 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         SIObj.SetLineNo(ctx.start.line)
         ctx.Node.Data = SIObj
         ctx.Node.Buffer = gFormPkg.StructToStream(SIObj.GetInfo())
-        ctx.Node.Condition = 'suppressif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        # ctx.Node.Condition = 'suppressif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
         self.visitChildren(ctx)
         for Ctx in ctx.vfrStatementStatList():
             self.InsertChild(ctx.Node, Ctx)
@@ -3183,7 +3239,8 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         GOIObj.SetLineNo(ctx.start.line)
         ctx.Node.Data = GOIObj
         ctx.Node.Buffer = gFormPkg.StructToStream(GOIObj.GetInfo())
-        ctx.Node.Condition = 'grayoutif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        # ctx.Node.Condition = 'grayoutif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
         self.visitChildren(ctx)
         for Ctx in ctx.vfrStatementStatList():
             self.InsertChild(ctx.Node, Ctx)
@@ -3203,7 +3260,8 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         IIObj.SetError(self.TransNum(ctx.Number()))
         ctx.Node.Data = IIObj
         ctx.Node.Buffer = gFormPkg.StructToStream(IIObj.GetInfo())
-        ctx.Node.Condition = 'inconsistentif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        # ctx.Node.Condition = 'inconsistentif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
         self.InsertEndNode(ctx.Node, ctx.stop.line)
 
         return ctx.Node
@@ -3251,9 +3309,15 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
         if ctx.Line() != None:
             BObj.SetLine(self.TransNum(ctx.Number(1)))
-            if ctx.Left() != None: BObj.SetAlign(0)
-            if ctx.Center() != None: BObj.SetAlign(1)
-            if ctx.Right() != None: BObj.SetAlign(2)
+            if ctx.Left() != None:
+                ctx.Node.Dict["align"] = KV("left", 0)
+                BObj.SetAlign(0)
+            if ctx.Center() != None:
+                ctx.Node.Dict["align"] = KV("center", 1)
+                BObj.SetAlign(1)
+            if ctx.Right() != None:
+                ctx.Node.Dict["align"] = KV("right", 2)
+                BObj.SetAlign(2)
 
         ctx.Node.Data = BObj
         ctx.Node.Buffer = gFormPkg.StructToStream(BObj.GetInfo())
@@ -3264,6 +3328,8 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             TObj.SetTimeout(self.TransNum(ctx.Number(2)))
             Node = IfrTreeNode(EFI_IFR_GUID_OP, TObj, gFormPkg.StructToStream(TObj.GetInfo()))
             ctx.Node.insertChild(Node)
+            BObj.SetHasTimeOut(True)
+            BObj.SetTimeOut(self.TransNum(ctx.Number(2)))
 
         return ctx.Node
 
@@ -3301,7 +3367,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             ctx.TypeSize, ReturnCode = gVfrVarDataTypeDB.GetDataTypeSizeByTypeName(ctx.TypeName)
             self.ErrorHandler(ReturnCode, ctx.D.line)
             ctx.Size = ctx.TypeSize * ctx.ArrayNum if ctx.ArrayNum > 0 else ctx.TypeSize
-        ctx.Buffer = Refine_EFI_IFR_BUFFER(ctx.Size)
+            ctx.Buffer = bytearray(ctx.Size)
 
         self.visitChildren(ctx)
         Line = ctx.start.line
@@ -3316,7 +3382,11 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         GuidObj.SetScope(1)
         ctx.Node.Data = GuidObj
         ctx.Node.Buffer = gFormPkg.StructToStream(GuidObj.GetInfo())
-        ctx.Node.Buffer += gFormPkg.StructToStream(ctx.Buffer)
+        if ctx.DataType() != None:
+            Buffer = bytearray(ctx.Size)
+            for i in range(0, len(Buffer)):
+                Buffer[i] = ctx.Buffer[i]
+            ctx.Node.Buffer += Buffer
 
         for Ctx in ctx.vfrStatementExtension():
             self.InsertChild(ctx.Node, Ctx)
@@ -3326,11 +3396,12 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrExtensionData.
     def visitVfrExtensionData(self, ctx:VfrSyntaxParser.VfrExtensionDataContext):
-
         IsArray = False if ctx.I == None else True
+        if IsArray:
+            Index = self.TransNum(ctx.I.text)
+        else:
+            Index = 0
         IsStruct = ctx.parentCtx.IsStruct
-        Buffer = ctx.parentCtx.Buffer
-
         self.visitChildren(ctx)
         ctx.TFValue = self.TransNum(ctx.N.text)
         Data = self.TransNum(ctx.N.text)
@@ -3338,10 +3409,8 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             ctx.FName += 'data' +'[' + ctx.I.text + ']'
         else:
             ctx.FName += 'data'
-        if IsStruct == False:
-           # Buffer.Data = Data
-            pass
-        else:
+        ctx.TFName = ctx.parentCtx.TypeName
+        if IsStruct:
             ctx.TFName += ctx.parentCtx.TypeName
             for i in range(0, len(ctx.arrayName())):
                 ctx.TFName += '.'
@@ -3349,103 +3418,23 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 ctx.FName += '.'
                 ctx.FName += ctx.arrayName(i).SubStrZ
 
-            FieldOffset, FieldType, FieldSize, BitField, _ = gVfrVarDataTypeDB.GetDataFieldInfo(ctx.TFName)
-        '''
-            if not BitField:
-                if IsArray:
-                    ArrayIndex = ctx.I.text
-                    FieldOffset += ArrayIndex* ctx.parentCtx.TypeSize
+        Buffer = ctx.parentCtx.Buffer
+        FieldOffset, FieldType, FieldSize, BitField, _ = gVfrVarDataTypeDB.GetDataFieldInfo(ctx.TFName)
+        ByteOffset = ctx.parentCtx.TypeSize * Index
+        if not BitField:
+            Offset = ByteOffset + FieldOffset
+            Buffer[Offset : Offset + FieldSize] = ctx.TFValue.to_bytes(FieldSize, "little")
+        else:
+            Mask = (1 << FieldSize) - 1
+            Offset = FieldOffset // 8
+            PreBits = FieldOffset % 8
+            Mask <<= PreBits
+            Value = int.from_bytes(Buffer[ByteOffset + Offset : ByteOffset + Offset + FieldSize], "little")
+            Data <<= PreBits
+            Value = (Value & (~Mask)) | Data
+            Buffer[ByteOffset + Offset : ByteOffset + Offset + FieldSize] = Value.to_bytes(FieldSize, "little")
 
-                if FieldType == EFI_IFR_TYPE_NUM_SIZE_8 or FieldType == EFI_IFR_TYPE_BOOLEAN:
-                    Buffer.Data[FieldOffset] = Data
-
-                if FieldType == EFI_IFR_TYPE_NUM_SIZE_16 or FieldType == EFI_IFR_TYPE_STRING:
-                        Bytes = Data.to_bytes(2, byteorder="little", signed=True)
-                        for i in range(0, 2):
-                            Buffer.Data[FieldOffset + i] = Bytes[i]
-
-                if FieldType == EFI_IFR_TYPE_NUM_SIZE_32:
-                        Bytes = Data.to_bytes(4, byteorder="little", signed=True)
-                        for i in range(0, 4):
-                            Buffer.Data[FieldOffset + i] = Bytes[i]
-
-                if FieldType == EFI_IFR_TYPE_NUM_SIZE_64:
-                        Bytes = Data.to_bytes(8, byteorder="little", signed=True)
-                        for i in range(0, 8):
-                            Buffer.Data[FieldOffset + i] = Bytes[i]
-            else:
-                Mask = 1 << FieldSize - 1
-                Offset = int(FieldOffset / 8)
-                PreBits = FieldOffset % 8
-                Mask <= PreBits
-                if FieldType == EFI_IFR_TYPE_NUM_SIZE_32:
-                    Bytes = Data.to_bytes(2, byteorder="little", signed=True)
-                    Data <<= PreBits
-                    Data = (Data & ~Mask) | Data
-                    for i in range(0, 2):
-                        Buffer.Data[Offset + i] = Bytes[i]
-
-
-
-                print('Offset')
-                print(FieldOffset)
-                print('Size')
-                print(FieldSize)
-
-                Begin = int(FieldOffset / 8)
-                print('Begin')
-                print(Begin)
-
-                End = int((FieldOffset + FieldSize) / 8)
-                print('End')
-                print(End)
-                PreBits = FieldOffset % 8
-                Data <<= (End - Begin + 1) * 8 - PreBits - FieldSize
-
-                if IsArray:
-                    ArrayIndex = ctx.I.Text
-                    for i in range(End, Begin - 1, -1):
-                        Buffer.Data[ArrayIndex* ctx.parentCtx.TypeSize + i] |= (Data & 0xff)
-                        Data >= 8
-                        print('{:016b}'.format(Data))
-
-                else:
-                    for i in range(Begin, End + 1):
-                        print("----------------------")
-                        print("i: " + str(i))
-                        print('{:08b}'.format(Buffer.Data[i]))
-                        Buffer.Data[i + End - Begin] |= (Data & 0xff)
-                        Data = Data >> 8
-                        print('{:08b}'.format(Buffer.Data[i]))
-                        print("----------------------")
-
-
-                4          5       6        7
-                00100000  00000010 00000100 00000000
-
-
-                00000000  00000000 00000000 00000000
-
-                00 00000001
-                0000 0000
-                37 % 8 = 5
-                0000 0001
-                左移三位
-                0000 1000 41
-                第四个字节和第五个字节 16 - prefix - size 左移的位数
-                0000 0000 0000 0001 <- 左移七位 9 + 7 = 16
-
-                0000 0000 0000 0000 0000 0000 0000 0000
-                0000 0000 0000 0001
-                41 / 8 = 5
-                41%8 = 1
-                41 + 10 = 51 /8 = 6
-                第5个字节 和 第六个字节 16 - 1 - 10 = 5 左移的位数
-                0000 0000
-                          1000 0000 001 00000
-            '''
-
-        return self.visitChildren(ctx)
+        return Buffer
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementModal.
     def visitVfrStatementModal(self, ctx:VfrSyntaxParser.VfrStatementModalContext):
@@ -4795,8 +4784,8 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             return DefaultValue
         else:
             StrToken = str(NumberToken)
-            if '0x' in StrToken:
-                NumberToken = int(StrToken, 0)
+            if StrToken.startswith('0x') or StrToken.startswith('0X'):
+                NumberToken = int(StrToken, 16)
             else:
                 NumberToken = int(StrToken)
         # error handle , value is too large to store

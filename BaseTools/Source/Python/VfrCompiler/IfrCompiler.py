@@ -12,9 +12,9 @@ import argparse
 from tkinter.ttk import Treeview
 from antlr4 import *
 
-from VfrCompiler.SourceVfrSyntaxParser import SourceVfrSyntaxParser
-from VfrCompiler.SourceVfrSyntaxVisitor import SourceVfrSyntaxVisitor
-from VfrCompiler.SourceVfrSyntaxLexer import SourceVfrSyntaxLexer
+from VfrCompiler.VfrSyntaxParser import *
+from VfrCompiler.VfrSyntaxVisitor import *
+from VfrCompiler.VfrSyntaxLexer import *
 from VfrCompiler.IfrCommon import *
 from VfrCompiler.YamlTree import *
 from VfrCompiler.IfrTree import *
@@ -85,8 +85,6 @@ parser.add_argument(
 parser.add_argument("-l", dest="CreateRecordListFile", help="create an output IFR listing file")
 parser.add_argument("-c", dest="CreateYamlFile", help="create Yaml file")
 parser.add_argument("-j", dest="CreateJsonFile", help="create Json file")
-# parser.add_argument("-c", dest ="LanuchYamlCompiler",help = "lanuch yaml compiler")
-# parser.add_argument("-i", dest="IncludePaths", nargs="+", help="add path argument")  #
 parser.add_argument("-w", dest="Workspace", help="workspace")
 parser.add_argument(
     "-o",
@@ -182,22 +180,6 @@ class CmdParser:
         if Args.ModuleName:
             self.Options.ModuleName = Args.ModuleName
 
-        # if Args.IncludePaths:
-        #     Paths = Args.IncludePaths
-        #     if Paths == None:
-        #         EdkLogger.error("VfrCompiler", OPTION_MISSING, "-i missing path argument")
-        #         self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_DEAD)
-        #         return
-        #     for Path in Paths:
-        #         if Path.startswith('/Ic:'):
-        #             self.Options.IncludePaths.append(Path.replace("/Ic:", "c:", 1))
-        #         elif Path.startswith('/IC:'):
-        #             self.Options.IncludePaths.append(Path.replace("/IC:", "C:", 1))
-        #         elif Path.startswith('Ic:'):
-        #             self.Options.IncludePaths.append(Path.replace("Ic:", "c:", 1))
-        #         elif Path.startswith('IC:'):
-        #             self.Options.IncludePaths.append(Path.replace("IC:", "C:", 1))
-
         if Args.OutputDirectory:
             self.Options.OutputDirectory = Args.OutputDirectory
             if self.Options.OutputDirectory == None:
@@ -217,6 +199,7 @@ class CmdParser:
         if Args.Workspace:
             self.Options.Workspace  = Args.Workspace
             IsInCludePathLine = False
+            HasVFRPPLine = False
             self.Options.IncludePaths = []
             MakeFile = os.path.join(os.path.dirname(os.path.dirname(self.Options.OutputDirectory)), 'Makefile')
             with open(MakeFile, 'r') as File:
@@ -224,19 +207,28 @@ class CmdParser:
                     if Line.find("INC =  \\") != -1:
                         IsInCludePathLine = True
                         continue
+                    if Line.find("VFRPP = ") != -1:
+                        HasVFRPPLine = True
+                        self.Options.VFRPP = Line.split('=')[1].strip()
+                        continue
                     if IsInCludePathLine:
                         Line = Line.lstrip().rstrip(" \\\n\r")
                         if Line.startswith('/IC'):
                             InCludePath = Line.replace('/IC', 'C', 1)
+                            self.Options.IncludePaths.append(InCludePath)
                         elif Line.startswith('/Ic'):
                             InCludePath = Line.replace('/Ic', 'C', 1)
+                            self.Options.IncludePaths.append(InCludePath)
                         elif Line.startswith('/I$(WORKSPACE)'):
                             InCludePath = Line.replace('/I$(WORKSPACE)', self.Options.Workspace, 1)
+                            self.Options.IncludePaths.append(InCludePath)
                         elif Line.startswith('/I$(DEBUG_DIR)'):
                             InCludePath = self.Options.DebugDirectory
+                            self.Options.IncludePaths.append(InCludePath)
+                        elif HasVFRPPLine == False:
+                            IsInCludePathLine = False
                         else:
                             break
-                        self.Options.IncludePaths.append(InCludePath)
 
         if Args.OldOutputDirectory:
             self.Options.OldOutputDirectory = Args.OldOutputDirectory
@@ -393,8 +385,8 @@ class CmdParser:
     def SetPreprocessorOutputFileName(self):
         if self.Options.BaseFileName == None:
             return -1
-        self.Options.PreprocessorOutputFileName = self.Options.OutputDirectory + self.Options.BaseFileName + ".i"
-        self.Options.ProcessedVfrFileName = self.Options.OutputDirectory + self.Options.BaseFileName + ".i"
+        self.Options.CProcessedVfrFileName = self.Options.OutputDirectory +  self.Options.BaseFileName + ".i"
+        self.Options.PyProcessedVfrFileName = self.Options.DebugDirectory + "Py_" + self.Options.BaseFileName + ".i"
         return 0
 
     def SetRecordListFileName(self):
@@ -524,42 +516,23 @@ class VfrCompiler:
         gFormPkg.Clear()
         gIfrFormId.Clear()
 
-    # Parse and collect data structures info in the ExpandedHeader.i files
-    def ParseHeader(self):
-        try:
-            InputStream = FileStream(self.Options.ProcessedVfrFileName)
-            VfrLexer = SourceVfrSyntaxLexer(InputStream)
-            VfrStream = CommonTokenStream(VfrLexer)
-            VfrParser = SourceVfrSyntaxParser(VfrStream)
-        except:
-            EdkLogger.error(
-                "VfrCompiler",
-                FILE_OPEN_FAILURE,
-                "File open failed for %s" % self.Options.ProcessedVfrFileName,
-                None,
-            )
-
-        Visitor = SourceVfrSyntaxVisitor()
-        Visitor.visit(VfrParser.vfrHeader())
-        pNode = gVfrVarDataTypeDB.GetDataTypeList()
-
     def PreProcess(self):
         if not self.IS_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_INITIALIZED):
             if not self.IS_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_DEAD):
                 self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_FAILED)
         else:
             if self.Options.SkipCPreprocessor == False:
-                # call C precessor first, but not support here
+                # call C precessor first in the tool itself, but currently not support here
                 self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_FAILED)
             else:
-                # makefile will calls commands to generate .i file
+                # makefile will call cl commands to generate .i file
                 # do not need to run C preprocessor in this tool itself
                 self.PreProcessDB.Preprocess()
-                self.ParseHeader()
+                #self.ParseHeader()
                 self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_VFR_PREPROCESSED)
 
     def Compile(self):
-        InFileName = self.Options.InputFileName
+        InFileName = self.Options.CProcessedVfrFileName
         if not self.IS_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_VFR_PREPROCESSED):
             EdkLogger.error(
                 "VfrCompiler",
@@ -569,14 +542,14 @@ class VfrCompiler:
             )
             self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_FAILED)
         else:
-            gVfrErrorHandle.SetInputFile(InFileName)  #
+            gVfrErrorHandle.SetInputFile(InFileName)
             gVfrErrorHandle.SetWarningAsError(self.Options.WarningAsError)
 
             try:
                 InputStream = FileStream(InFileName)
-                VfrLexer = SourceVfrSyntaxLexer(InputStream)
+                VfrLexer = VfrSyntaxLexer(InputStream)
                 VfrStream = CommonTokenStream(VfrLexer)
-                VfrParser = SourceVfrSyntaxParser(VfrStream)
+                VfrParser = VfrSyntaxParser(VfrStream)
             except:
                 EdkLogger.error(
                     "VfrCompiler",
@@ -587,8 +560,8 @@ class VfrCompiler:
                 if not self.IS_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_DEAD):
                     self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_FAILED)
                 return
-            self.Visitor = SourceVfrSyntaxVisitor(self.PreProcessDB, self.VfrRoot, self.Options.OverrideClassGuid)
-            self.Visitor.visit(VfrParser.vfrFormSetDefinition())
+            self.Visitor = VfrSyntaxVisitor(self.PreProcessDB, self.VfrRoot, self.Options.OverrideClassGuid)
+            self.Visitor.visit(VfrParser.vfrProgram())
 
             if self.Visitor.ParserStatus != 0:
                 if not self.IS_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_DEAD):

@@ -982,7 +982,11 @@ class YamlParser:
             BObj.SetAlign(2)
         Node = IfrTreeNode(EFI_IFR_GUID_OP, BObj, gFormPkg.StructToStream(BObj.GetInfo()))
         ParentNode.insertChild(Node)
-        ########　timeout
+        if "timeout" in Banner.keys():
+            TObj = IfrTimeout()
+            TObj.SetTimeout(Banner["timeout"].PostVal)
+            ChildNode = IfrTreeNode(EFI_IFR_GUID_OP, TObj, gFormPkg.StructToStream(TObj.GetInfo()))
+            Node.insertChild(ChildNode)
         return Node
 
     def ParseVfrStatementModal(self, Modal, ParentNode):

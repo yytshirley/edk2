@@ -876,15 +876,15 @@ locals[Node=IfrTreeNode(EFI_IFR_DATE_OP), QType=EFI_QUESION_TYPE.QUESTION_DATE, 
             (   'year' 'varid' '=' StringIdentifier '.' StringIdentifier ','
                 'prompt' '=' 'STRING_TOKEN' '(' Number ')' ','
                 'help' '=' 'STRING_TOKEN' '(' Number ')' ','
-                minMaxDateStepDefault[localctx.Val, 0]
+                minMaxDateStepDefault[localctx.Node, localctx.Val, 0]
                 'month' 'varid' '=' StringIdentifier '.' StringIdentifier ','
                 'prompt' '=' 'STRING_TOKEN' '(' Number ')' ','
                 'help' '=' 'STRING_TOKEN' '(' Number ')' ','
-                minMaxDateStepDefault[localctx.Val, 1]
+                minMaxDateStepDefault[localctx.Node, localctx.Val, 1]
                 'day' 'varid' '=' StringIdentifier '.' StringIdentifier ','
                 'prompt' '=' 'STRING_TOKEN' '(' Number ')' ','
                 'help' '=' 'STRING_TOKEN' '(' Number ')' ','
-                minMaxDateStepDefault[localctx.Val, 2]
+                minMaxDateStepDefault[localctx.Node, localctx.Val, 2]
                 (F2='flags' '=' vfrDateFlags ',')?
                 (vfrStatementInconsistentIf)*
             )
@@ -892,7 +892,7 @@ locals[Node=IfrTreeNode(EFI_IFR_DATE_OP), QType=EFI_QUESION_TYPE.QUESTION_DATE, 
         'enddate' ';'
     ;
 
-minMaxDateStepDefault[Date, KeyValue]
+minMaxDateStepDefault[Node, Date, KeyValue]
     :   'minimum' '=' Number ','
         'maximum' '=' Number ','
         ('step' '=' Number ',')?
@@ -926,15 +926,15 @@ locals[Node=IfrTreeNode(EFI_IFR_TIME_OP), QType=EFI_QUESION_TYPE.QUESTION_TIME, 
                 'hour' 'varid' '=' StringIdentifier '.' StringIdentifier ','
                 'prompt' '=' 'STRING_TOKEN' '(' Number ')' ','
                 'help' '=' 'STRING_TOKEN' '(' Number ')' ','
-                minMaxTimeStepDefault[localctx.Val, 0]
+                minMaxTimeStepDefault[localctx.Node, localctx.Val, 0]
                 'minute' 'varid' '=' StringIdentifier '.' StringIdentifier ','
                 'prompt' '=' 'STRING_TOKEN' '(' Number ')' ','
                 'help' '=' 'STRING_TOKEN' '(' Number ')' ','
-                minMaxTimeStepDefault[localctx.Val, 1]
+                minMaxTimeStepDefault[localctx.Node, localctx.Val, 1]
                 'second' 'varid' '=' StringIdentifier '.' StringIdentifier ','
                 'prompt' '=' 'STRING_TOKEN' '(' Number ')' ','
                 'help' '=' 'STRING_TOKEN' '(' Number ')' ','
-                minMaxTimeStepDefault[localctx.Val, 2]
+                minMaxTimeStepDefault[localctx.Node, localctx.Val, 2]
                 (F2='flags' '=' vfrTimeFlags ',')?
                 (vfrStatementInconsistentIf)*
             )
@@ -942,7 +942,7 @@ locals[Node=IfrTreeNode(EFI_IFR_TIME_OP), QType=EFI_QUESION_TYPE.QUESTION_TIME, 
         'endtime' ';'
     ;
 
-minMaxTimeStepDefault[Time, KeyValue]
+minMaxTimeStepDefault[Node, Time, KeyValue]
     :   'minimum' '=' Number ','
         'maximum' '=' Number ','
         ('step' '=' Number ',')?
