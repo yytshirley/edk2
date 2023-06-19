@@ -218,7 +218,6 @@ class PreProcessDB:
                         self._ParseDefines(File, HeaderDict)
                 if CppHeader == None:
                     EdkLogger.error("VfrCompiler", FILE_NOT_FOUND, "File/directory %s not found in workspace" % (HeaderFile), None)
-                print(f"parent: {HeaderFile}")
                 self._ParseRecursiveHeader(CppHeader, HeaderDict)
 
         return HeaderDict
@@ -227,7 +226,6 @@ class PreProcessDB:
         if CppHeader != None:
             for Include in CppHeader.includes:
                 Include = Include[1:-1]
-                print(f"child: {Include}")
                 IncludeHeaderFileList = self._FindIncludeHeaderFile(self.Options.IncludePaths, Include)
                 Flag = False
                 for File in IncludeHeaderFileList:
@@ -291,10 +289,13 @@ class PreProcessDB:
                             # Save def info for yaml generation
                             Dict[SubKey] = SubValue
                         # tranfer value to key for yaml generation
-                        SubValue = str(SubValue) if type(SubValue) != EFI_GUID else SubValue.to_string()
-                        if self._IsDigit(SubValue):
-                            SubValue = "0x%04x" % self._ToDigit(SubValue)
-                        Dict[SubValue] = SubKey
+                            if type(SubValue) == EFI_GUID:
+                                Dict[SubValue.to_string()] = SubKey
+                        else:
+                            SubValue = str(SubValue) if type(SubValue) != EFI_GUID else SubValue.to_string()
+                            if self._IsDigit(SubValue):
+                                SubValue = "0x%04x" % self._ToDigit(SubValue)
+                            Dict[SubValue] = SubKey
                     elif self.Options.LanuchYamlCompiler:
                         Dict[SubKey] = SubValue
             else:
@@ -311,6 +312,8 @@ class PreProcessDB:
                     # GUID is unique, to transfer GUID Parsed Value -> GUID Defined Key.
                     if IsVfrDef:
                         Dict[Key] = Value
+                        if type(Value) == EFI_GUID:
+                            Dict[Value.to_string()] = Key
                     Value = str(Value) if type(Value) != EFI_GUID else Value.to_string()
                     if self._IsDigit(Value):
                         Value = "0x%04x" % self._ToDigit(Value)
