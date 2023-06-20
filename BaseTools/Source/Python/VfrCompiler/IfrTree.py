@@ -434,13 +434,13 @@ class IfrTree:
                         f.write('  "Size": "{}",\n'.format(str(pInfoNode.Width)))
                         f.write('  "Offset": {},\n'.format(str(pInfoNode.Offset)))
                         # f.write('  \"Value\": \"{}\"\n'.format(str(pInfoNode.Value)))
-                        if pInfoNode.Type == EFI_IFR_TYPE_DATE:
+                        if pInfoNode.Type == EFI_IFR_TYPE_DATE and type(pInfoNode.Value) == EFI_HII_DATE:
                             f.write(
                                 '  "Value": "{}/{}/{}"\n'.format(
                                     pInfoNode.Value.Year, pInfoNode.Value.Month, pInfoNode.Value.Day
                                 )
                             )
-                        elif pInfoNode.Type == EFI_IFR_TYPE_TIME:
+                        elif pInfoNode.Type == EFI_IFR_TYPE_TIME and type(pInfoNode.Value) == EFI_HII_TIME:
                             f.write(
                                 '  "Value": "{}:{}:{}"\n'.format(
                                     pInfoNode.Value.Hour,
@@ -448,7 +448,7 @@ class IfrTree:
                                     pInfoNode.Value.Second,
                                 )
                             )
-                        elif pInfoNode.Type == EFI_IFR_TYPE_REF:
+                        elif pInfoNode.Type == EFI_IFR_TYPE_REF and type(pInfoNode.Value) == EFI_HII_REF:
                             f.write(
                                 '  "Value": "{};{};{};{}\n'.format(
                                     pInfoNode.Value.QuestionId,
@@ -495,8 +495,6 @@ class IfrTree:
                     for Key in self.PreProcessDB.VfrDict.keys():
                         if type(self.PreProcessDB.VfrDict[Key]) == EFI_GUID:
                             f.write(f"  {Key}:  '{self.PreProcessDB.VfrDict[Key].to_string()}'\n")
-                        elif not self.PreProcessDB._IsDigit(Key) and Key.find(",") == -1:
-                            f.write(f"  {Key}:  {self.PreProcessDB.VfrDict[Key]}\n")
                     f.write("\n")
                 self._DumpYamlDfsWithUni(self.Root, f)
             f.close()
@@ -1147,7 +1145,7 @@ class IfrTree:
                         f.write(ValueIndent + "min_year:  {}\n".format(Root.Data.Min))
                         f.write(ValueIndent + "max_year:  {}\n".format(Root.Data.Max))
                         if Root.Data.D_Year != None:
-                            f.write(ValueIndent + "default_year:  {}\n".format(Root.Data.D_year))
+                            f.write(ValueIndent + "default_year:  {}\n".format(Root.Data.D_Year))
                         f.write(ValueIndent + "month:  " + Root.Data.Month + "\n")
                         if Root.Data.D_Month != None:
                             f.write(ValueIndent + "default_month:  {}\n".format(Root.Data.D_Month))

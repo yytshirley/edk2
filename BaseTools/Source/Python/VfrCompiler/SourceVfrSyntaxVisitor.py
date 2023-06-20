@@ -855,6 +855,7 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
         QName = None
         QId = EFI_QUESTION_ID_INVALID
         ReturnCode = None
+        self.UsedDefaultArray = []
 
         self.visitChildren(ctx)
 
@@ -1945,6 +1946,17 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
 
             if Type == EFI_IFR_TYPE_OTHER:
                 self.ErrorHandler(VfrReturnCode.VFR_RETURN_FATAL_ERROR, Line, "Default data type error.")
+            # Bug here
+            for i in range(0, len(ValueList)):
+                if type(ValueList[i]) == int:
+                    if Type == EFI_IFR_TYPE_TIME:
+                        ValueList[i] = EFI_HII_TIME()
+
+                    if Type == EFI_IFR_TYPE_DATE:
+                        ValueList[i] = EFI_HII_DATE()
+
+                    if Type == EFI_IFR_TYPE_REF:
+                        ValueList[i] = EFI_HII_REF()
 
             DObj = IfrDefault(Type, ValueList)
             DObj.SetLineNo(Line)
@@ -2490,6 +2502,7 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
         ctx.Node.Data = NObj
         ctx.Node.Buffer = gFormPkg.StructToStream(NObj.GetInfo())
         self.InsertEndNode(ctx.Node, ctx.stop.line)
+        self.CurrentMinMaxData = None
 
         return ctx.Node
 
@@ -2948,6 +2961,7 @@ class SourceVfrSyntaxVisitor(ParseTreeVisitor):
         ctx.Node.Data = OObj
         ctx.Node.Buffer = gFormPkg.StructToStream(OObj.GetInfo())
         self.InsertEndNode(ctx.Node, ctx.stop.line)
+        self.CurrentMinMaxData = None
 
         return ctx.Node
 

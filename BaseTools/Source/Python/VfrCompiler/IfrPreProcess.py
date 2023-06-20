@@ -314,10 +314,11 @@ class PreProcessDB:
                         Dict[Key] = Value
                         if type(Value) == EFI_GUID:
                             Dict[Value.to_string()] = Key
-                    Value = str(Value) if type(Value) != EFI_GUID else Value.to_string()
-                    if self._IsDigit(Value):
-                        Value = "0x%04x" % self._ToDigit(Value)
-                    Dict[Value] = Key
+                    else:
+                        Value = str(Value) if type(Value) != EFI_GUID else Value.to_string()
+                        if self._IsDigit(Value):
+                            Value = "0x%04x" % self._ToDigit(Value)
+                        Dict[Value] = Key
                 elif self.Options.LanuchYamlCompiler:
                     Dict[Key] = Value
 

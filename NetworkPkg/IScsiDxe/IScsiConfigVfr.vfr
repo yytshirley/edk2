@@ -9,6 +9,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include "IScsiConfigNVDataStruc.h"
 
 #define EFI_NETWORK_DEVICE_CLASS  0x04
+#define SYSTEM_CONFIGURATION  Setup
 
 formset
   guid     = ISCSI_CONFIG_GUID,

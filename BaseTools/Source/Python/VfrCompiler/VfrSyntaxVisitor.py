@@ -802,6 +802,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         QName = None
         QId = EFI_QUESTION_ID_INVALID
         ReturnCode = None
+        self.UsedDefaultArray = []
 
         self.visitChildren(ctx)
 
@@ -1082,10 +1083,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                         Value = ~Value + 1
                     ctx.ValueList.append(Value)
 
-                if Type == EFI_IFR_TYPE_BOOLEAN:
-                    ctx.ValueList.append(self.TransNum(ctx.Number(0)))
-
-                if Type == EFI_IFR_TYPE_STRING:
+                else:
                     ctx.ValueList.append(self.TransNum(ctx.Number(0)))
 
         return ctx.ValueList
@@ -1782,18 +1780,32 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             ValueList = ctx.vfrConstantValueField().ValueList
             Value = ValueList[0]
             Type = self.CurrQestVarInfo.VarType
+            print(Line)
 
             if self.CurrentMinMaxData != None and self.CurrentMinMaxData.IsNumericOpcode():
                 # check default value is valid for Numeric Opcode
                 for i in range(0, len(ValueList)):
                     Value = ValueList[i]
+                    print(f"value {Value}, line {Line}")
+                    print(self.CurrentMinMaxData.GetMinData())
+                    print(self.CurrentMinMaxData.GetMaxData())
                     if type(Value) == int:
                         if Value < self.CurrentMinMaxData.GetMinData() or Value > self.CurrentMinMaxData.GetMaxData():
                             self.ErrorHandler(VfrReturnCode.VFR_RETURN_INVALID_PARAMETER, Line, "Numeric default value must be between MinValue and MaxValue.")
 
             if Type == EFI_IFR_TYPE_OTHER:
                 self.ErrorHandler(VfrReturnCode.VFR_RETURN_FATAL_ERROR, Line, "Default data type error.")
+            # Bug here
+            for i in range(0, len(ValueList)):
+                if type(ValueList[i]) == int:
+                    if Type == EFI_IFR_TYPE_TIME:
+                        ValueList[i] = EFI_HII_TIME()
 
+                    if Type == EFI_IFR_TYPE_DATE:
+                        ValueList[i] = EFI_HII_DATE()
+
+                    if Type == EFI_IFR_TYPE_REF:
+                        ValueList[i] = EFI_HII_REF()
             DObj = IfrDefault(Type, ValueList)
             DObj.SetLineNo(Line)
             DObj.SetValueStream(self.ExtractOriginalText(ctx.vfrConstantValueField()))
@@ -2256,6 +2268,9 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 UpdatedNObj = IfrNumeric(EFI_IFR_TYPE_NUM_SIZE_32)
             else:
                 UpdatedNObj = IfrNumeric(self.CurrQestVarInfo.VarType)
+            UpdatedNObj.QName = NObj.QName
+            UpdatedNObj.VarIdStr = NObj.VarIdStr
+            UpdatedNObj.HasQuestionId = NObj.HasQuestionId
             UpdatedNObj.FlagsStream = NObj.FlagsStream
             UpdatedNObj.HasKey = NObj.HasKey
             UpdatedNObj.HasStep = NObj.HasStep
@@ -2270,6 +2285,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         ctx.Node.Data = NObj
         ctx.Node.Buffer = gFormPkg.StructToStream(NObj.GetInfo())
         self.InsertEndNode(ctx.Node, ctx.stop.line)
+        self.CurrentMinMaxData = None
 
         return ctx.Node
 
@@ -2579,6 +2595,9 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 UpdatedOObj = IfrOneOf(EFI_IFR_TYPE_NUM_SIZE_32)
             else:
                 UpdatedOObj = IfrOneOf(self.CurrQestVarInfo.VarType)
+            UpdatedOObj.QName = OObj.QName
+            UpdatedOObj.VarIdStr = OObj.VarIdStr
+            UpdatedOObj.HasQuestionId = OObj.HasQuestionId
             UpdatedOObj.GetInfo().Question = OObj.GetInfo().Question
             UpdatedOObj.GetInfo().Flags = OObj.GetInfo().Flags
             UpdatedOObj.GetInfo().Data.MinValue = OObj.GetInfo().Data.MinValue
@@ -2598,6 +2617,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         ctx.Node.Data = OObj
         ctx.Node.Buffer = gFormPkg.StructToStream(OObj.GetInfo())
         self.InsertEndNode(ctx.Node, ctx.stop.line)
+        self.CurrentMinMaxData = None
 
         return ctx.Node
 
@@ -4810,6 +4830,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         return Text.replace('\r', '').replace('\n', '').replace('  ', ' ')
 
     def CheckDuplicateDefaultValue(self, DefaultId, Line, TokenValue):
+        print(self.PreProcessDB.Options.InputFileName)
         for i in range(0, len(self.UsedDefaultArray)):
             if self.UsedDefaultArray[i] == DefaultId:
                 gVfrErrorHandle.HandleWarning(EFI_VFR_WARNING_CODE.VFR_WARNING_DEFAULT_VALUE_REDEFINED, Line, TokenValue)

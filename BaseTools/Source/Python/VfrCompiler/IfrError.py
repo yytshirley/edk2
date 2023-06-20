@@ -107,8 +107,8 @@ class VfrErrorHandle:
                 break
         if WarningMsg != "":
             if self.WarningAsError:
-                EdkLogger.error("VfrCompiler", int(WarningCode), WarningMsg, self.InputFileName, LineNum, "warning treated as error")
-            EdkLogger.warn("VfrCompiler", int(WarningMsg), self.InputFileName, LineNum, TokenValue)
+                EdkLogger.error("VfrCompiler", WarningCode.value, WarningMsg, self.InputFileName, LineNum, "warning treated as error")
+            EdkLogger.warn("VfrCompiler", WarningCode.value, self.InputFileName, LineNum, TokenValue)
 
     def PrintMsg(self, LineNum, MsgType="Error", ErrorMsg=None, TokenValue=None):
         if MsgType == "Warning":
@@ -125,7 +125,7 @@ class VfrErrorHandle:
                 ErrorMsg = self.vfrErrorMessage[Key]
                 break
         if ErrorMsg != "":
-            EdkLogger.error("VfrCompiler", int(ErrorCode), ErrorMsg, self.InputFileName, LineNum, TokenValue)
+            EdkLogger.error("VfrCompiler", ErrorCode.value, ErrorMsg, self.InputFileName, LineNum, TokenValue)
             return 1
         else:
             return 0

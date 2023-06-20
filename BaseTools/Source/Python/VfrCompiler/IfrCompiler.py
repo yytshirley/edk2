@@ -542,7 +542,7 @@ class VfrCompiler:
             )
             self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_FAILED)
         else:
-            gVfrErrorHandle.SetInputFile(InFileName)
+            gVfrErrorHandle.SetInputFile(self.Options.InputFileName)
             gVfrErrorHandle.SetWarningAsError(self.Options.WarningAsError)
 
             try:

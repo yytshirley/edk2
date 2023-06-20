@@ -1,6 +1,6 @@
-from VfrCompiler.SourceVfrSyntaxVisitor import *
-from VfrCompiler.SourceVfrSyntaxLexer import *
-from VfrCompiler.SourceVfrSyntaxParser import *
+from VfrCompiler.VfrSyntaxVisitor import *
+from VfrCompiler.VfrSyntaxLexer import *
+from VfrCompiler.VfrSyntaxParser import *
 from VfrCompiler.IfrFormPkg import *
 from VfrCompiler.IfrError import *
 from VfrCompiler.IfrPreProcess import *
@@ -330,20 +330,20 @@ class YamlParser:
         # call C preprocessor, need to modify in the future
         # wip
         try:
-            InputStream = FileStream(self.Options.ProcessedVfrFileName)  ###
-            VfrLexer = SourceVfrSyntaxLexer(InputStream)
+            InputStream = FileStream(self.Options.CProcessedVfrFileName)  ###
+            VfrLexer = VfrSyntaxLexer(InputStream)
             VfrStream = CommonTokenStream(VfrLexer)
-            self.VfrParser = SourceVfrSyntaxParser(VfrStream)
+            self.VfrParser = VfrSyntaxParser(VfrStream)
         except:
             EdkLogger.error(
                 "VfrCompiler",
                 FILE_OPEN_FAILURE,
-                "File open failed for %s" % self.Options.ProcessedVfrFileName,
+                "File open failed for %s" % self.Options.CProcessedVfrFileName,
                 None,
             )
 
-        self.Visitor = SourceVfrSyntaxVisitor(None, self.Options.OverrideClassGuid)
-        self.Visitor.visit(self.VfrParser.vfrHeader())
+        self.Visitor = VfrSyntaxVisitor(None, self.Options.OverrideClassGuid)
+        self.Visitor.visit(self.VfrParser.vfrProgram())
         # FileName = self.Options.OutputDirectory + self.Options.BaseFileName + 'Header.txt'
         # try:
         #     f = open(FileName, 'w')
@@ -594,10 +594,10 @@ class YamlParser:
         self.InsertEndNode(Node)
 
     def ParserVfrStatementExpression(self, Condition, ParentNode):
-        VfrLexer = SourceVfrSyntaxLexer(InputStream(Condition))
+        VfrLexer = VfrSyntaxLexer(InputStream(Condition))
         VfrStream = CommonTokenStream(VfrLexer)
-        VfrParser = SourceVfrSyntaxParser(VfrStream)
-        Visitor = SourceVfrSyntaxVisitor(self.PreProcessDB, None, None, self.VfrQuestionDB)
+        VfrParser = VfrSyntaxParser(VfrStream)
+        Visitor = VfrSyntaxVisitor(self.PreProcessDB, None, None, self.VfrQuestionDB)
         Visitor.visit(VfrParser.vfrStatementExpression(ParentNode))
 
     def ParseVfrStatementDefaultStore(self, DefaultStore, ParentNode):
@@ -838,7 +838,17 @@ class YamlParser:
                             )
 
             if Type == EFI_IFR_TYPE_OTHER:
-                self.ErrorHandler(VfrReturnCode.VFR_RETURN_FATAL_ERROR, "Default data type error.")
+                self.ErrorHandler(VfrReturnCode.VFR_RETURN_FATAL_ERROR, "Default data type error.")            # Bug here
+            for i in range(0, len(ValueList)):
+                if type(ValueList[i]) == int:
+                    if Type == EFI_IFR_TYPE_TIME:
+                        ValueList[i] = EFI_HII_TIME()
+
+                    if Type == EFI_IFR_TYPE_DATE:
+                        ValueList[i] = EFI_HII_DATE()
+
+                    if Type == EFI_IFR_TYPE_REF:
+                        ValueList[i] = EFI_HII_REF()
             DObj = IfrDefault(Type, ValueList)
             DObj.ValueStream = str(Default["value"].PostVal)
             Node = IfrTreeNode(EFI_IFR_DEFAULT_OP, DObj)
@@ -1475,6 +1485,7 @@ class YamlParser:
         QName = None
         QId = EFI_QUESTION_ID_INVALID
         VarIdStr = ""
+        self.UsedDefaultArray = []
 
         ReturnCode = None
         if "name" in QDict.keys():
@@ -2158,6 +2169,7 @@ class YamlParser:
 
         Node.Buffer = gFormPkg.StructToStream(NObj.GetInfo())
         self.InsertEndNode(Node)
+        self.CurrentMinMaxData = None
         return Node
 
     def _ParseNumericFlags(self, FlagsDict):
@@ -2553,6 +2565,7 @@ class YamlParser:
             self._ParseVfrStatementQuestionOptionList(OneOf["component"], Node)
         Node.Buffer = gFormPkg.StructToStream(OObj.GetInfo())
         self.InsertEndNode(Node)
+        self.CurrentMinMaxData = None
         return Node
 
     def ParseVfrStatementString(self, Str, ParentNode, Position):

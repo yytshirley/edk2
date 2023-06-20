@@ -2,7 +2,7 @@
 # encoding: utf-8
 from antlr4 import *
 from io import StringIO
-from typing import TextIO
+from typing.io import TextIO
 import sys
 
 
@@ -6240,6 +6240,7 @@ class VfrSyntaxParser ( Parser ):
             self.parser = parser
             self.ValueList = []
             self.ListType = False
+            self.ValueType = None
 
         def Number(self, i:int=None):
             if i is None:
@@ -20471,3 +20472,8 @@ class VfrSyntaxParser ( Parser ):
         finally:
             self.exitRule()
         return localctx
+
+
+
+
+
