@@ -433,7 +433,6 @@ class IfrTree:
                         f.write('  "DefaultStore": "{}",\n'.format(str(pVsNode.Id)))
                         f.write('  "Size": "{}",\n'.format(str(pInfoNode.Width)))
                         f.write('  "Offset": {},\n'.format(str(pInfoNode.Offset)))
-                        # f.write('  \"Value\": \"{}\"\n'.format(str(pInfoNode.Value)))
                         if pInfoNode.Type == EFI_IFR_TYPE_DATE and type(pInfoNode.Value) == EFI_HII_DATE:
                             f.write(
                                 '  "Value": "{}/{}/{}"\n'.format(
@@ -497,23 +496,6 @@ class IfrTree:
                             f.write(f"  {Key}:  '{self.PreProcessDB.VfrDict[Key].to_string()}'\n")
                     f.write("\n")
                 self._DumpYamlDfsWithUni(self.Root, f)
-            f.close()
-        except:
-            EdkLogger.error(
-                "VfrCompiler", FILE_OPEN_FAILURE, "File open failed for %s" % FileName, None
-            )
-
-    def DumpCompiledYaml(self):
-        FileName = self.Options.YamlOutputFileName
-        try:
-            with open(FileName, "w", encoding="utf-8") as f:
-                f.write("## DO NOT REMOVE -- YAML Mode\n")
-                if self.PreProcessDB.HeaderFiles != []:
-                    f.write("include:\n")
-                    for HeaderFile in self.PreProcessDB.HeaderFiles:
-                        f.write("- " + HeaderFile + "\n")
-                    f.write("\n")
-                self._DumpYamlDfs(self.Root, f)
             f.close()
         except:
             EdkLogger.error(
@@ -1546,4 +1528,3 @@ class IfrTree:
                 self._DumpYamlDfsWithUni(ChildNode, f)
 
         return
-
