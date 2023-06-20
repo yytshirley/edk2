@@ -16,7 +16,6 @@ from VfrCompiler.VfrSyntaxParser import *
 from VfrCompiler.VfrSyntaxVisitor import *
 from VfrCompiler.VfrSyntaxLexer import *
 from VfrCompiler.IfrCommon import *
-from VfrCompiler.YamlTree import *
 from VfrCompiler.IfrTree import *
 from VfrCompiler.IfrPreProcess import *
 from VfrCompiler.IfrError import *
@@ -69,13 +68,6 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument("InputFileName", help="Input source file name")
 parser.add_argument("--vfr", dest="LanuchVfrCompiler", action="store_true", help="lanuch VfrCompiler")
-parser.add_argument(
-    "--yml",
-    "--yaml",
-    dest="LanuchYamlCompiler",
-    action="store_true",
-    help="lanuch YamlCompiler",
-)
 parser.add_argument(
     "--version",
     action="version",
@@ -170,9 +162,6 @@ class CmdParser:
 
         if Args.LanuchVfrCompiler:
             self.Options.LanuchVfrCompiler = True
-
-        if Args.LanuchYamlCompiler:
-            self.Options.LanuchYamlCompiler = True
 
         if Args.CreateRecordListFile:
             self.Options.CreateRecordListFile = True
@@ -337,10 +326,6 @@ class CmdParser:
             self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_DEAD)
             return
 
-        if self.SetYamlOutputFileName() != 0:
-            self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_DEAD)
-            return
-
     def SetBaseFileName(self):
         if self.Options.InputFileName == None:
             return -1
@@ -367,8 +352,6 @@ class CmdParser:
             return -1
         if self.Options.LanuchVfrCompiler:
             self.Options.PkgOutputFileName = self.Options.OutputDirectory + "PyVfr_" + self.Options.BaseFileName + ".hpk"
-        else:
-            self.Options.PkgOutputFileName = self.Options.OutputDirectory + "PyYml_" + self.Options.BaseFileName + ".hpk"
 
         return 0
 
@@ -377,8 +360,6 @@ class CmdParser:
             return -1
         if self.Options.LanuchVfrCompiler:
             self.Options.COutputFileName = self.Options.DebugDirectory + "PyVfr_" + self.Options.BaseFileName + ".c"
-        else:
-            self.Options.COutputFileName = self.Options.DebugDirectory + "PyYml_" + self.Options.BaseFileName + ".c"
 
         return 0
 
@@ -386,7 +367,6 @@ class CmdParser:
         if self.Options.BaseFileName == None:
             return -1
         self.Options.CProcessedVfrFileName = self.Options.OutputDirectory +  self.Options.BaseFileName + ".i"
-        self.Options.PyProcessedVfrFileName = self.Options.DebugDirectory + "Py_" + self.Options.BaseFileName + ".i"
         return 0
 
     def SetRecordListFileName(self):
@@ -394,8 +374,6 @@ class CmdParser:
             return -1
         if self.Options.LanuchVfrCompiler:
             self.Options.RecordListFileName = self.Options.DebugDirectory + "PyVfr_" + self.Options.BaseFileName + ".lst"
-        else:
-            self.Options.RecordListFileName = self.Options.DebugDirectory + "PyYml_" + self.Options.BaseFileName + ".lst"
         return 0
 
     def SetSourceYamlFileName(self):
@@ -408,14 +386,6 @@ class CmdParser:
         if self.Options.BaseFileName == None:
             return -1
         self.Options.JsonFileName = self.Options.DebugDirectory + self.Options.BaseFileName + ".json"
-        return 0
-
-    def SetYamlOutputFileName(self):
-        if self.Options.BaseFileName == None:
-            return -1
-        # for test
-        self.Options.ProcessedYAMLFileName = self.Options.DebugDirectory + self.Options.BaseFileName + "Processed.yml"
-        self.Options.YamlOutputFileName = self.Options.DebugDirectory + self.Options.BaseFileName + "Compiled.yml"
         return 0
 
     def FindIncludeHeaderFile(self, Start, Name):
@@ -431,71 +401,6 @@ class CmdParser:
 
     def IS_RUN_STATUS(self, Status):
         return self.RunStatus == Status
-
-
-class YamlCompiler(CmdParser):
-    def __init__(self, Cmd: CmdParser):
-        self.Clear()
-        self.Options = Cmd.Options
-        self.RunStatus = Cmd.RunStatus
-        self.YamlRoot = IfrTreeNode()
-        self.PreProcessDB = PreProcessDB(self.Options)
-        self.YamlTree = YamlTree(self.YamlRoot, self.PreProcessDB, self.Options)
-        if (not self.IS_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_FAILED)) \
-            and (not self.IS_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_DEAD)):
-            self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_INITIALIZED)
-
-    def Clear(self):
-        gVfrVarDataTypeDB.Clear()
-        gVfrDefaultStore.Clear()
-        gVfrDataStorage.Clear()
-        gFormPkg.Clear()
-        gIfrFormId.Clear()
-
-    def PreProcess(self):
-        if not self.IS_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_INITIALIZED):
-            if not self.IS_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_DEAD):
-                self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_FAILED)
-        else:
-            self.PreProcessDB.Preprocess()
-            self.YamlTree.PreProcess()
-            self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_YAML_PREPROCESSED)
-
-    def Compile(self):
-        gVfrErrorHandle.SetInputFile(self.Options.YamlFileName)
-        gVfrErrorHandle.SetWarningAsError(self.Options.WarningAsError)
-        if not self.IS_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_YAML_PREPROCESSED):
-            if not self.IS_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_DEAD):
-                self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_FAILED)
-        else:
-            self.YamlTree.Compile()
-            if self.Options.CreateJsonFile:
-                self.YamlTree.IfrTree.DumpJson()
-            self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_YAML_COMPILED)
-
-    def ConsumeDLT(self):
-        if not self.IS_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_YAML_COMPILED):
-            if not self.IS_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_DEAD):
-                self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_FAILED)
-        else:
-            # self.YamlTree.ConsumeDLT()
-            self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_YAML_DLT_CONSUMED)
-
-    def GenBinaryFiles(self):
-        if not self.IS_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_YAML_DLT_CONSUMED):
-            if not self.IS_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_DEAD):
-                self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_FAILED)
-        else:
-            self.Options.CreateRecordListFile = False
-            self.YamlTree.GenBinaryFiles()
-            self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_FINISHED)
-
-    def SET_RUN_STATUS(self, Status):
-        self.RunStatus = Status
-
-    def IS_RUN_STATUS(self, Status):
-        return self.RunStatus == Status
-
 
 class VfrCompiler:
     def __init__(self, Cmd: CmdParser):
@@ -650,13 +555,6 @@ def main():
         Compiler.Compile()
         Compiler.GenBinaryFiles()
         Compiler.DumpSourceYaml()
-
-    if Cmd.Options.LanuchYamlCompiler:
-        Compiler = YamlCompiler(Cmd)
-        Compiler.PreProcess()
-        Compiler.Compile()
-        Compiler.ConsumeDLT()
-        Compiler.GenBinaryFiles()
 
     Status = Compiler.RunStatus
     if Status == COMPILER_RUN_STATUS.STATUS_DEAD or Status == COMPILER_RUN_STATUS.STATUS_FAILED:

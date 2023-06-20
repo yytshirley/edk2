@@ -14,7 +14,6 @@ class Options:
     def __init__(self):
         # open/close Vfr/Yamlcompiler
         self.LanuchVfrCompiler = False
-        self.LanuchYamlCompiler = False
 
         self.ModuleName = None
         self.Workspace = None
@@ -32,7 +31,6 @@ class Options:
         self.SkipCPreprocessor = True
         self.CPreprocessorOptions = None
         self.CProcessedVfrFileName = None
-        self.PyProcessedVfrFileName = None
         self.HasOverrideClassGuid = False
         self.OverrideClassGuid = None
         self.WarningAsError = False
@@ -45,13 +43,6 @@ class Options:
         self.JsonFileName = None
 
         self.UniStrDefFileName = None  # {String Token : String Token ID} Uni file name
-        self.UniStrDisplayFile = None  # {String Token : DisPlay String}
-        self.DeltaFileName = None
-        self.YamlOutputFileName = None  #
-
-        # for test
-        # self.ExpandedHeaderFileName = None # save header info for yaml
-        self.ProcessedYAMLFileName = None  # for test
 
 
 class KV:
@@ -77,7 +68,7 @@ class PreProcessDB:
         # Read Guid definitions in Header files
         self.HeaderDict = self._GetHeaderDicts(self.HeaderFiles)
         # Read Uni string token/id definitions in StrDef.h file
-        self.UniDict, self.UniDisPlayDict = self._GetUniDicts()
+        self.UniDict = self._GetUniDicts()
         # Read definitions in vfr file
         self.VfrDict = self._GetVfrDicts()
         self.Preprocessed = True
@@ -171,21 +162,7 @@ class PreProcessDB:
         UniDict = {}  # {String Token : String Token ID}
         self._ParseDefines(FileName, UniDict)
 
-        if self.Options.UniStrDisplayFile == None:
-            self.Options.UniStrDisplayFile = self.Options.OutputDirectory + self.Options.ModuleName + "Uni.json"
-
-        DisPlayUniDict = {}  # {String Token : DisPlay String}
-        if self.Options.LanuchYamlCompiler:
-            f = open(self.Options.UniStrDisplayFile, encoding="utf-8")
-            Dict = json.load(f)
-            f.close()
-            Dict = Dict["UniString"]["en-US"]
-            for Key in Dict.keys():
-                if Key in UniDict.keys():
-                    NewKey = "{}".format("0x%04x" % (int(UniDict[Key], 0)))
-                    DisPlayUniDict[NewKey] = Dict[Key]
-
-        return UniDict, DisPlayUniDict
+        return UniDict
 
     def _GetHeaderDicts(self, HeaderFiles):
         HeaderDict = {}
@@ -296,8 +273,6 @@ class PreProcessDB:
                             if self._IsDigit(SubValue):
                                 SubValue = "0x%04x" % self._ToDigit(SubValue)
                             Dict[SubValue] = SubKey
-                    elif self.Options.LanuchYamlCompiler:
-                        Dict[SubKey] = SubValue
             else:
                 if Value.find("//") != -1:
                     Value = Value.split("//")[0].strip()
@@ -319,8 +294,6 @@ class PreProcessDB:
                         if self._IsDigit(Value):
                             Value = "0x%04x" % self._ToDigit(Value)
                         Dict[Value] = Key
-                elif self.Options.LanuchYamlCompiler:
-                    Dict[Key] = Value
 
     def _FindIncludeHeaderFile(self, IncludePaths, File):
         Name = File.split("/")[-1]
