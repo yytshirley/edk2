@@ -490,10 +490,13 @@ class IfrTree:
                         f.write(" - " + HeaderFile + "\n")
                     f.write("\n")
                 if self.PreProcessDB.VfrDict != {}:
-                    f.write("defines:\n")
+                    Index = 0
                     for Key in self.PreProcessDB.VfrDict.keys():
                         if type(self.PreProcessDB.VfrDict[Key]) == EFI_GUID:
+                            if Index == 0:
+                                f.write("defines:\n")
                             f.write(f"  {Key}:  '{self.PreProcessDB.VfrDict[Key].to_string()}'\n")
+                            Index = Index + 1
                     f.write("\n")
                 self._DumpYamlDfsWithUni(self.Root, f)
             f.close()

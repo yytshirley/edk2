@@ -1795,7 +1795,6 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
             if Type == EFI_IFR_TYPE_OTHER:
                 self.ErrorHandler(VfrReturnCode.VFR_RETURN_FATAL_ERROR, Line, "Default data type error.")
-            # Bug here
             for i in range(0, len(ValueList)):
                 if type(ValueList[i]) == int:
                     if Type == EFI_IFR_TYPE_TIME:
