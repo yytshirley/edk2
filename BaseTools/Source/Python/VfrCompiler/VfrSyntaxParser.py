@@ -5,7 +5,8 @@ from io import StringIO
 from typing.io import TextIO
 import sys
 
-
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from IfrCtypes import *
 from IfrFormPkg import *
