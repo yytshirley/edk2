@@ -1,3 +1,5 @@
+import ctypes
+import struct
 from cgi import print_environ_usage
 from email.errors import NonASCIILocalPartDefect, NonPrintableDefect
 from enum import Flag
@@ -14,8 +16,6 @@ from IfrCtypes import *
 from IfrFormPkg import *
 from IfrUtility import *
 from IfrTree import *
-import ctypes
-import struct
 
 if __name__ is not None and "." in __name__:
     from .VfrSyntaxParser import VfrSyntaxParser
@@ -31,9 +31,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         self.PreProcessDB = PreProcessDB
         self.OverrideClassGuid = OverrideClassGuid
         self.VfrQuestionDB = QuestionDB if QuestionDB != None else VfrQuestionDB()
-
         self.ParserStatus = 0
-
         self.Value = None
         self.LastFormNode = None
         self.IfrOpHdrIndex = 0
@@ -41,23 +39,18 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         self.IfrOpHdr = [None]
         self.IfrOpHdrLineNo = [0]
         self.UsedDefaultArray = []
-
         self.VfrRulesDB = VfrRulesDB()
         self.CurrQestVarInfo = EFI_VARSTORE_INFO()
-
         self.CurrentQuestion = None
         self.CurrentMinMaxData = None
-
         self.IsStringOp = False
         self.IsOrderedList = False
         self.IsCheckBoxOp = False
         self.NeedAdjustOpcode = False
 
 
-
     # Visit a parse tree produced by VfrSyntaxParser#vfrProgram.
     def visitVfrProgram(self, ctx:VfrSyntaxParser.VfrProgramContext):
-        #self.VfrQuestionDB.PrintAllQuestion('Questions.txt')
         return self.visitChildren(ctx)
 
     # Visit a parse tree produced by VfrSyntaxParser#pragmaPackShowDef.
@@ -119,7 +112,6 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         self.visitChildren(ctx)
 
         gVfrVarDataTypeDB.DeclareDataTypeEnd()
-
         return None
 
 
@@ -142,7 +134,6 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by VfrSyntaxParser#vfrDataStructFields.
     def visitVfrDataStructFields(self, ctx:VfrSyntaxParser.VfrDataStructFieldsContext):
-
         return self.visitChildren(ctx)
 
 
@@ -378,7 +369,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 gVfrVarDataTypeDB, gVfrDataStorage, self.VfrQuestionDB,
                 ctx.stop.line)
             Status = 0 if ReturnCode == VfrReturnCode.VFR_RETURN_SUCCESS else 1
-            self.ParserStatus += Status ###
+            self.ParserStatus += Status
             self.NeedAdjustOpcode = True
 
         self.InsertEndNode(ctx.Node, ctx.stop.line)
@@ -1204,7 +1195,8 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 FMapObj.SetFormMapMethod(self.TransNum(ctx.Number(i+1)), ctx.guidDefinition(i).Guid)
         FormMap = FMapObj.GetInfo()
         MethodMapList = FMapObj.GetMethodMapList()
-        for MethodMap in MethodMapList: # Extend Header Size for MethodMapList
+        for MethodMap in MethodMapList:
+            # Extend Header Size for MethodMapList
             FormMap.Header.Length += sizeof(EFI_IFR_FORM_MAP_METHOD)
 
         ctx.Node.Data = FMapObj
@@ -2064,11 +2056,10 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             GuidObj = IfrGuid(0)
             GuidObj.SetGuid(EDKII_IFR_BIT_VARSTORE_GUID)
             GuidObj.SetLineNo(Line)
-            GuidObj.SetScope(1) # position
+            GuidObj.SetScope(1)
             ctx.GuidNode.Data = GuidObj
             ctx.GuidNode.Buffer = gFormPkg.StructToStream(GuidObj.GetInfo())
             ctx.GuidNode.insertChild(ctx.Node)
-            #ctx.GuidNode.Parent.insertChild(ctx.Node)
             self.InsertEndNode(ctx.GuidNode, ctx.stop.line)
 
         # check dataType
@@ -4807,7 +4798,6 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                 NumberToken = int(StrToken, 16)
             else:
                 NumberToken = int(StrToken)
-        # error handle , value is too large to store
         return NumberToken
 
     def AssignQuestionKey(self, OpObj, Key):

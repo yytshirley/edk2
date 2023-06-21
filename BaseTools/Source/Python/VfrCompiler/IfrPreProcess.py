@@ -2,19 +2,18 @@ import yaml
 import re
 import os
 import json
-from antlr4 import *
+import subprocess
 import CppHeaderParser
+from antlr4 import *
 from VfrCompiler.IfrFormPkg import *
 from VfrCompiler.IfrCtypes import *
 from Common.LongFilePathSupport import LongFilePath
-import subprocess
 
 
 class Options:
     def __init__(self):
-        # open/close Vfr/Yamlcompiler
+        # open/close VfrCompiler
         self.LanuchVfrCompiler = False
-
         self.ModuleName = None
         self.Workspace = None
         self.VFRPP = None
@@ -36,13 +35,11 @@ class Options:
         self.WarningAsError = False
         self.AutoDefault = False
         self.CheckDefault = False
-
         self.CreateYamlFile = True
         self.YamlFileName = None
         self.CreateJsonFile = True
         self.JsonFileName = None
-
-        self.UniStrDefFileName = None  # {String Token : String Token ID} Uni file name
+        self.UniStrDefFileName = None
 
 
 class KV:
@@ -86,7 +83,6 @@ class PreProcessDB:
                 Guid = EFI_GUID()
                 Guid.from_list(GuidList)
                 return Guid
-        # error handle , value is too large to store
 
     def RevertValue(self, Value) -> str:
         if type(Value) == EFI_GUID:
@@ -159,7 +155,7 @@ class PreProcessDB:
         FileName = self.Options.UniStrDefFileName
         with open(FileName, "r") as File:
             Content = File.read()
-        UniDict = {}  # {String Token : String Token ID}
+        UniDict = {}
         self._ParseDefines(FileName, UniDict)
 
         return UniDict
@@ -265,7 +261,7 @@ class PreProcessDB:
                         if IsVfrDef:
                             # Save def info for yaml generation
                             Dict[SubKey] = SubValue
-                        # tranfer value to key for yaml generation
+                            # tranfer value to key for yaml generation
                             if type(SubValue) == EFI_GUID:
                                 Dict[SubValue.to_string()] = SubKey
                         else:

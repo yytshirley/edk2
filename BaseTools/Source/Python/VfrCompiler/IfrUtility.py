@@ -271,8 +271,8 @@ class VfrVarDataTypeDB(object):
 
         if Type == None:
             return VfrReturnCode.VFR_RETURN_FATAL_ERROR
-
-        self.NewDataType.Type = Type  # need to limit the value of the type
+        # need to limit the value of the type
+        self.NewDataType.Type = Type
 
         return VfrReturnCode.VFR_RETURN_SUCCESS
 
@@ -480,7 +480,7 @@ class VfrVarDataTypeDB(object):
         if ReturnCode != VfrReturnCode.VFR_RETURN_SUCCESS:
             return Offset, Type, Size, BitField, ReturnCode
 
-        # 　if it is not struct data type
+        # if it is not struct data type
         Type = pType.Type
         Size = pType.TotalSize
 
@@ -674,24 +674,6 @@ class VfrVarDataTypeDB(object):
             pTmp = pTmp.Next
         return False
 
-    # typedef struct {
-    #   MY_BITS_DATA    BitsData;
-    #   UINT32          EfiBitGrayoutTest : 5;
-    #   UINT32          EfiBitNumeric     : 4;
-    #   UINT32          EfiBitOneof       : 10;
-    #   UINT32          EfiBitCheckbox    : 1;
-    #   UINT32                            : 0;
-    # } MY_EFI_BITS_VARSTORE_DATA;
-
-    # typedef struct { 20/25/29/33/34
-    #   UINT16    NestByteField;
-    #   UINT8                     : 1;
-    #   UINT8     NestBitCheckbox : 1;
-    #   UINT8     NestBitOneof    : 2;
-    #   UINT8                     : 0;
-    #   UINT8     NestBitNumeric  : 4;
-    # } MY_BITS_DATA;
-
     def Dump(self, f):
         f.write("\n\n*************\n")
         f.write("\t\tPackAlign = " + str(self.PackAlign) + "\n")
@@ -809,7 +791,6 @@ class VfrDefaultStore(object):
             pNode = pNode.Next
         if pNode == None:
             return VfrReturnCode.VFR_RETURN_UNDEFINED
-        # pNode.DefaultId sprintf (NewAltCfg, "%04x", pNode->mDefaultId)
         gVfrBufferConfig.Open()
         if gVfrBufferConfig.Select(VarStoreName, VarStoreGuid) == 0:
             Returnvalue = gVfrBufferConfig.Write(
@@ -881,9 +862,9 @@ class SVfrVarStorageNode:
 
 class SConfigItem:
     def __init__(self, Name=None, Guid=None, Id=None, Type=None, Offset=None, Width=None, Value=None):
-        self.Name = Name  # varstore name
-        self.Guid = Guid  # varstore guid, varstore name + guid deside one varstore
-        self.Id = Id  # default ID
+        self.Name = Name
+        self.Guid = Guid
+        self.Id = Id
         if Type != None:
             # list of Offset/Value in the varstore
             self.InfoStrList = SConfigInfo(Type, Offset, Width, Value)
@@ -905,7 +886,7 @@ class VfrBufferConfig(object):
     __metaclass__ = ABCMeta
 
     def __init__(self):
-        self.ItemListHead = None  # SConfigItem
+        self.ItemListHead = None
         self.ItemListTail = None
         self.ItemListPos = None
 
@@ -964,7 +945,7 @@ class VfrBufferConfig(object):
         if Ret != 0:
             return Ret
 
-        if Mode == "a":  # add
+        if Mode == "a":
             if self.Select(Name, Guid, Id) != 0:
                 pItem = SConfigItem(Name, Guid, Id, Type, Offset, Width, Value)
                 if pItem == None:
@@ -994,7 +975,7 @@ class VfrBufferConfig(object):
                 pInfo.Next = self.ItemListPos.InfoStrList
                 self.ItemListPos.InfoStrList = pInfo
 
-        elif Mode == "d":  # delete
+        elif Mode == "d":
             if self.ItemListHead == self.ItemListPos:
                 self.ItemListHead = self.ItemListPos.Next
 
@@ -1008,7 +989,7 @@ class VfrBufferConfig(object):
 
             self.ItemListPos = pItem.Next
 
-        elif Mode == "i":  # set info
+        elif Mode == "i":
             if Id != None:
                 self.ItemListPos.Id = Id
         else:
@@ -1058,7 +1039,8 @@ class BufferVarStoreFieldInfoNode:
 
 class VfrDataStorage(object):
     def __init__(self):
-        self.BufferVarStoreList = None  # SVfrVarStorageNode
+        # SVfrVarStorageNode
+        self.BufferVarStoreList = None
         self.EfiVarStoreList = None
         self.NameVarStoreList = None
         self.CurrVarStorageNode = None
@@ -1072,7 +1054,8 @@ class VfrDataStorage(object):
         self.FreeVarStoreIdBitMap[0] = 0x80000000
 
     def Clear(self):
-        self.BufferVarStoreList = None  # SVfrVarStorageNode
+        #  SVfrVarStorageNode
+        self.BufferVarStoreList = None
         self.EfiVarStoreList = None
         self.NameVarStoreList = None
         self.CurrVarStorageNode = None
@@ -1082,7 +1065,7 @@ class VfrDataStorage(object):
         self.FreeVarStoreIdBitMap = []
         for i in range(0, EFI_FREE_VARSTORE_ID_BITMAP_SIZE):
             self.FreeVarStoreIdBitMap.append(0)
-        # Question ID0 is reserved
+        #  Question ID0 is reserved
         self.FreeVarStoreIdBitMap[0] = 0x80000000
 
     def GetBufferVarStoreList(self):
@@ -1090,13 +1073,13 @@ class VfrDataStorage(object):
 
     def CheckGuidField(self, pNode, StoreGuid, HasFoundOne, ReturnCode):
         if StoreGuid != None:
-            # 　If has guid info, compare the guid field.
+            #  If has guid info, compare the guid field.
             if pNode.Guid.__cmp__(StoreGuid):
                 self.CurrVarStorageNode = pNode
                 ReturnCode = VfrReturnCode.VFR_RETURN_SUCCESS
                 return True, ReturnCode, HasFoundOne
         else:
-            # 　not has Guid field, check whether this name is the only one.
+            #  not has Guid field, check whether this name is the only one.
             if HasFoundOne:
                 #  The name has conflict, return name redefined.
                 ReturnCode = VfrReturnCode.VFR_RETURN_VARSTORE_NAME_REDEFINED_ERROR
@@ -1178,7 +1161,7 @@ class VfrDataStorage(object):
             return VarStoreId, VfrReturnCode.VFR_RETURN_SUCCESS
 
         VarStoreId = EFI_VARSTORE_ID_INVALID
-        pNode, ReturnCode = self.GetVarStoreByDataType(StoreName, StoreGuid)  #
+        pNode, ReturnCode = self.GetVarStoreByDataType(StoreName, StoreGuid)
         if pNode != None:
             self.CurrVarStorageNode = pNode
             VarStoreId = pNode.VarStoreId
@@ -2261,7 +2244,6 @@ class VfrQuestionDB(object):
             while pNode != None:
                 f.write("Question VarId is {} and QuestionId is ".format(pNode.VarIdStr))
                 f.write("%d\n" % (pNode.QuestionId))
-                # f.write('%#x\n'%(pNode.QuestionId))
                 pNode = pNode.Next
 
         f.close()

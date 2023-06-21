@@ -195,7 +195,7 @@ class FormPkg:
             return
         if Root.OpCode != None and Root.OpCode != EFI_IFR_SHOWN_DEFAULTSTORE_OP:
             self.PkgLength += Root.Data.GetInfo().Header.Length
-            Root.Offset = gFormPkg.Offset  #
+            Root.Offset = gFormPkg.Offset
             self.Offset += Root.Data.GetInfo().Header.Length
         if Root.Child != []:
             for ChildNode in Root.Child:
@@ -789,7 +789,7 @@ class IfrSubClass(IfrLine, IfrOpHeader):
     def __init__(
         self,
     ):
-        self.SubClass = EFI_IFR_GUID_SUBCLASS()  # static guid
+        self.SubClass = EFI_IFR_GUID_SUBCLASS()
         IfrOpHeader.__init__(self, self.SubClass.Header, EFI_IFR_GUID_OP, ctypes.sizeof(EFI_IFR_GUID_SUBCLASS))
         self.SubClass.ExtendOpCode = EFI_IFR_EXTEND_OP_SUBCLASS
         self.SubClass.Guid = EFI_IFR_TIANO_GUID
@@ -1002,7 +1002,7 @@ class IfrForm(IfrLine, IfrOpHeader):
 class IfrFormMap(IfrLine, IfrOpHeader):
     def __init__(self):
         self.FormMap = EFI_IFR_FORM_MAP()
-        self.MethodMapList = []  # EFI_IFR_FORM_MAP_METHOD()
+        self.MethodMapList = []
         IfrOpHeader.__init__(self, self.FormMap.Header, EFI_IFR_FORM_MAP_OP)
         self.FormMap.FormId = 0
 
@@ -1234,7 +1234,7 @@ class IfrQuestionHeader(IfrStatementHeader):
         self.QHeader.VarStoreInfo.VarName = BaseInfo.Info.VarName
         self.QHeader.VarStoreInfo.VarOffset = BaseInfo.Info.VarOffset
 
-    def GetVarStoreInfo(self, Info):  # Bug
+    def GetVarStoreInfo(self, Info):
         Info.VarStoreId = self.QHeader.VarStoreId
         Info.VarStoreInfo = self.QHeader.VarStoreInfo
         return Info
@@ -1424,7 +1424,7 @@ class IfrExtensionGuid(IfrLine, IfrOpHeader):
         else:
             self.DataType = TypeName
         self.FieldList = []
-        self.Data = Data  # databuffer is saved here
+        self.Data = Data
         IfrOpHeader.__init__(self, self.Guid.Header, EFI_IFR_GUID_OP, ctypes.sizeof(EFI_IFR_GUID) + Size)
         EFI_IFR_DEFAULT_GUID = EFI_GUID(0, 0, 0, GuidArray(0, 0, 0, 0, 0, 0, 0, 0))
         self.Guid.Guid = EFI_IFR_DEFAULT_GUID

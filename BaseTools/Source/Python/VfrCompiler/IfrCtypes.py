@@ -1,11 +1,11 @@
+import uuid
+import ctypes
 from ctypes import *
 from re import A, X
 from telnetlib import X3PAD
 from tkinter import YView
-import uuid
 from VfrCompiler.IfrError import *
 from struct import *
-import ctypes
 
 
 EFI_STRING_ID_INVALID = 0x0
@@ -337,7 +337,6 @@ def Refine_EFI_IFR_BIT(Type, PreBits, Size, Data):
 
             def __init__(self, Data):
                 self.Data = Data
-
     elif sizeof(Type) * 8 - Size - PreBits == 0:
 
         class Refine_EFI_IFR_BIT(Structure):
@@ -349,9 +348,7 @@ def Refine_EFI_IFR_BIT(Type, PreBits, Size, Data):
 
             def __init__(self, Data):
                 self.Data = Data
-
     else:
-
         class Refine_EFI_IFR_BIT(Structure):
             _pack_ = 1
             _fields_ = [
@@ -559,7 +556,6 @@ EFI_IFR_NUMERIC_SIZE_1 = 0x00
 EFI_IFR_NUMERIC_SIZE_2 = 0x01
 EFI_IFR_NUMERIC_SIZE_4 = 0x02
 EFI_IFR_NUMERIC_SIZE_8 = 0x03
-
 EFI_IFR_DISPLAY = 0x30
 EFI_IFR_DISPLAY_INT_DEC = 0x00
 EFI_IFR_DISPLAY_UINT_DEC = 0x10
@@ -624,6 +620,7 @@ class EFI_IFR_NUMERIC(Structure):
 
 
 def Refine_EFI_IFR_NUMERIC(Type):
+
     if Type == EFI_IFR_TYPE_NUM_SIZE_8:
         DataType = u8Node
     elif Type == EFI_IFR_TYPE_NUM_SIZE_16:
@@ -634,7 +631,6 @@ def Refine_EFI_IFR_NUMERIC(Type):
         DataType = u64Node
     else:
         DataType = u32Node
-
     class EFI_IFR_NUMERIC(Structure):
         _pack_ = 1
         _fields_ = [
@@ -896,7 +892,7 @@ def Refine_EFI_IFR_EQ_ID_VAL_LIST(Nums):
             ("Header", EFI_IFR_OP_HEADER),
             ("QuestionId", c_uint16),
             ("ListLength", c_uint16),
-            ("ValueList", c_uint16 * Nums),  #
+            ("ValueList", c_uint16 * Nums),
         ]
 
         def __init__(self):
@@ -916,7 +912,6 @@ class EFI_IFR_OR(Structure):
     _pack_ = 1
     _fields_ = [
         ("Header", EFI_IFR_OP_HEADER),
-        # ('Extend', c_ubyte)
     ]
 
 
@@ -1066,7 +1061,7 @@ class EFI_IFR_GET(Structure):
     _fields_ = [
         ("Header", EFI_IFR_OP_HEADER),
         ("VarStoreId", c_uint16),
-        ("VarStoreInfo", VarStoreInfoNode),  ##########
+        ("VarStoreInfo", VarStoreInfoNode),
         ("VarStoreType", c_ubyte),
     ]
 
@@ -1076,7 +1071,7 @@ class EFI_IFR_SET(Structure):
     _fields_ = [
         ("Header", EFI_IFR_OP_HEADER),
         ("VarStoreId", c_uint16),
-        ("VarStoreInfo", VarStoreInfoNode),  ##########
+        ("VarStoreInfo", VarStoreInfoNode),
         ("VarStoreType", c_ubyte),
     ]
 
@@ -1788,7 +1783,6 @@ BasicDataTypes = [
 
 def Refine_EFI_IFR_GUID_OPTIONKEY(Type):
     ValueType = TypeDict[Type]
-
     class EFI_IFR_GUID_OPTIONKEY(Structure):
         _pack_ = 1
         _fields_ = [

@@ -1,6 +1,6 @@
+import Common.EdkLogger as EdkLogger
 from enum import Enum
 from Common.BuildToolError import *
-import Common.EdkLogger as EdkLogger
 
 
 class VfrReturnCode(Enum):
@@ -114,7 +114,7 @@ class VfrErrorHandle:
         if MsgType == "Warning":
             EdkLogger.verbose(ErrorMsg)
         else:
-            EdkLogger.error("VfrCompiler", 0x3000, ErrorMsg, self.InputFileName, LineNum, TokenValue)
+            EdkLogger.error("VfrCompiler", FORMAT_INVALID, ErrorMsg, self.InputFileName, LineNum, TokenValue)
 
     def HandleError(self, ErrorCode, LineNum=None, TokenValue=None):
         if self.vfrErrorMessage == None:

@@ -251,13 +251,13 @@ class IfrTree:
                         for i in range(0, len(Root.Buffer)):
                             self.Index += 1
                             Data = Root.Buffer[i]
-                            if self.Index % BYTES_PRE_LINE == 1:  # the first value of current line
+                            if self.Index % BYTES_PRE_LINE == 1:
                                 C.write("  ")
                             C.write("0x%02X" % Data)
                             if self.Index != gFormPkg.PkgLength:
                                 if (
                                     self.Index % BYTES_PRE_LINE == 0
-                                ):  # the last value of current line
+                                ):
                                     C.write(",\n")
                                 else:
                                     C.write(",  ")
@@ -288,13 +288,13 @@ class IfrTree:
                         for i in range(0, len(Root.Buffer)):
                             self.Index += 1
                             Data = Root.Buffer[i]
-                            if self.Index % BYTES_PRE_LINE == 1:  # the first value of current line
+                            if self.Index % BYTES_PRE_LINE == 1:
                                 C.write("  ")
                             C.write("0x%02X" % Data)
                             if self.Index != gFormPkg.PkgLength:
                                 if (
                                     self.Index % BYTES_PRE_LINE == 0
-                                ):  # the last value of current line
+                                ):
                                     C.write(",\n")
                                 else:
                                     C.write(",  ")
@@ -346,7 +346,6 @@ class IfrTree:
         if Root == None:
             return
         if Root.OpCode != None:
-            # f.write('{}\n'.format(type(Root.Data)))
             LineBuffer = ""
             if Root.Buffer != None:
                 for i in range(0, len(Root.Buffer)):
@@ -981,7 +980,8 @@ class IfrTree:
                         f.write(ValueIndent + "component:  \n")
 
                 if Root.OpCode == EFI_IFR_DEFAULT_OP:
-                    if Root.Position != "Do not display":  ##　specific condition here
+                    #　specific condition here
+                    if Root.Position != "Do not display":
                         f.write(KeyIndent + "- default:\n")
                         if Root.Condition != None:
                             f.write(ValueIndent + "condition:  '{}'\n".format(Root.Condition))
@@ -1022,7 +1022,7 @@ class IfrTree:
                             f.write(
                                 ValueIndent + "defaultstore: {}\n".format(Root.Data.DefaultStore)
                             )
-                # pending here
+
                 if Root.OpCode == EFI_IFR_ORDERED_LIST_OP:
                     f.write(KeyIndent + "- orderedlist:\n")
                     self._DumpQuestionInfosWithUni(Root, f, ValueIndent)
@@ -1300,7 +1300,6 @@ class IfrTree:
                             f.write(ValueIndent + "formid:  " + Root.Dict["formid"].Key + "\n")
                         else:
                             f.write(ValueIndent + "formid:  {}\n".format("0x%x" % (Info.FormId)))
-                        # f.write(ValueIndent + 'question:  ' + HeaderDict[Info.Question.QuestionId] + ' #  Optional Input\n')
 
                     self._DumpQuestionInfosWithUni(Root, f, ValueIndent)
 
@@ -1421,7 +1420,6 @@ class IfrTree:
                             ValueIndent + "guid:  " + self.PreProcessDB.GetKey(Info.Guid) + "\n"
                         )
                         if Root.Data.GetDataType() != "":
-                            # f.write(ValueIndent + "databuffer: #optional input\n")
                             f.write(ValueIndent + "{}: \n".format(Root.Data.GetDataType()))
                             for data in Root.Data.GetFieldList():
                                 f.write(

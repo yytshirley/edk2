@@ -1019,7 +1019,6 @@ locals[Node=IfrTreeNode(EFI_IFR_DISABLE_IF_OP)]
 
 
 // Compatible for framework vfr file
-//
 vfrStatementgrayoutIfSuppressIf
 locals[Node]
     :   'suppressif'
@@ -1098,7 +1097,7 @@ locals[Node=IfrTreeNode(EFI_IFR_GUID_OP)]
     :   'label' Number ';'
     ;
 
-vfrStatementBanner // Is TimeOut needed
+vfrStatementBanner
 locals[Node=IfrTreeNode(EFI_IFR_GUID_OP)]
     :   'banner' (',')?
         'title' '=' 'STRING_TOKEN' '(' Number ')' ','

@@ -1,17 +1,16 @@
-from distutils.filelist import FileList
-from pickletools import uint8
+import re
+import os
 import sys
 import yaml
 import logging
 import shutil
 import subprocess
 import time
-import re
-import os
 import argparse
 from tkinter.ttk import Treeview
 from antlr4 import *
-
+from distutils.filelist import FileList
+from pickletools import uint8
 from VfrCompiler.VfrSyntaxParser import *
 from VfrCompiler.VfrSyntaxVisitor import *
 from VfrCompiler.VfrSyntaxLexer import *
@@ -154,11 +153,6 @@ class CmdParser:
             parser.print_help()
             self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_DEAD)
             return
-
-        # parse command line
-        # if Args.version:
-        #    self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_DEAD)
-        #    return
 
         if Args.LanuchVfrCompiler:
             self.Options.LanuchVfrCompiler = True
@@ -352,7 +346,6 @@ class CmdParser:
             return -1
         if self.Options.LanuchVfrCompiler:
             self.Options.PkgOutputFileName = self.Options.OutputDirectory + "PyVfr_" + self.Options.BaseFileName + ".hpk"
-
         return 0
 
     def SetCOutputFileName(self):
@@ -360,7 +353,6 @@ class CmdParser:
             return -1
         if self.Options.LanuchVfrCompiler:
             self.Options.COutputFileName = self.Options.DebugDirectory + "PyVfr_" + self.Options.BaseFileName + ".c"
-
         return 0
 
     def SetPreprocessorOutputFileName(self):
@@ -433,7 +425,6 @@ class VfrCompiler:
                 # makefile will call cl commands to generate .i file
                 # do not need to run C preprocessor in this tool itself
                 self.PreProcessDB.Preprocess()
-                #self.ParseHeader()
                 self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_VFR_PREPROCESSED)
 
     def Compile(self):
@@ -495,7 +486,7 @@ class VfrCompiler:
             if self.Options.CreateJsonFile:
                 self.VfrTree.DumpJson()
 
-    def GenBinary(self):  # gen hpk file
+    def GenBinary(self):
         if not self.IS_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_VFR_COMPILEED):
             if not self.IS_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_DEAD):
                 self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_FAILED)
@@ -503,7 +494,7 @@ class VfrCompiler:
             if self.Options.CreateIfrPkgFile:
                 self.VfrTree.GenBinary()
 
-    def GenCFile(self):  # gen c file
+    def GenCFile(self):
         if not self.IS_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_VFR_COMPILEED):
             if not self.IS_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_DEAD):
                 self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_FAILED)
