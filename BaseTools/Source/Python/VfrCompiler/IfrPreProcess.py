@@ -164,7 +164,6 @@ class PreProcessDB:
         HeaderDict = {}
         VFRrespPath  = os.path.join(self.Options.OutputDirectory, "vfrpp_resp.txt")
         if os.path.exists(VFRrespPath):
-            print(self.Options.VFRPP)
             Command = [
                 rf"{self.Options.VFRPP}",
                 "/showIncludes",
