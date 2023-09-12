@@ -178,45 +178,45 @@ class PreProcessDB:
 
         return UniDict, DisPlayUniDict
 
-    # def _GetHeaderDicts(self, HeaderFiles):
-    #     HeaderDict = {}
-    #     VFRrespPath = Path(self.Options.OutputDirectory) / "vfrpp_resp.txt"
-    #     if VFRrespPath.exists():
-    #         Command = [
-    #             rf"{self.Options.VFRPP}",
-    #             "/showIncludes",
-    #             f"@{VFRrespPath}",
-    #             self.Options.InputFileName,
-    #         ]
-    #         try:
-    #             Process = subprocess.Popen(
-    #                 Command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True
-    #             )
-    #             _, Error = Process.communicate()
-    #         except subprocess.CalledProcessError as e:
-    #             EdkLogger.error("VfrCompiler", COMMAND_FAILURE, " ".join(Command))
-    #         Pattern = r"Note: including file:\s+(.*)"
-    #         IncludePaths = re.findall(Pattern, Error)
-    #         for IncludePath in IncludePaths:
-    #             self._ParseDefines(IncludePath, HeaderDict)
-    #     else:
-    #         for HeaderFile in HeaderFiles:
-    #             FileList = self._FindIncludeHeaderFile(self.Options.IncludePaths, HeaderFile)
-    #             CppHeader = None
-    #             for File in FileList:
-    #                 if File.find(HeaderFile.replace("/", "\\")) != -1:
-    #                     CppHeader = CppHeaderParser.CppHeader(File)
-    #                     self._ParseDefines(File, HeaderDict)
-    #             if CppHeader is None:
-    #                 EdkLogger.error(
-    #                     "VfrCompiler",
-    #                     FILE_NOT_FOUND,
-    #                     "File/directory %s not found in workspace" % (HeaderFile),
-    #                     None
-    #                 )
-    #             self._ParseRecursiveHeader(CppHeader, HeaderDict)
+    def _GetHeaderDicts(self, HeaderFiles):
+        HeaderDict = {}
+        # VFRrespPath = Path(self.Options.OutputDirectory) / "vfrpp_resp.txt"
+        # if VFRrespPath.exists():
+        #     Command = [
+        #         rf"{self.Options.VFRPP}",
+        #         "/showIncludes",
+        #         f"@{VFRrespPath}",
+        #         self.Options.InputFileName,
+        #     ]
+        #     try:
+        #         Process = subprocess.Popen(
+        #             Command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True
+        #         )
+        #         _, Error = Process.communicate()
+        #     except subprocess.CalledProcessError as e:
+        #         EdkLogger.error("VfrCompiler", COMMAND_FAILURE, " ".join(Command))
+        #     Pattern = r"Note: including file:\s+(.*)"
+        #     IncludePaths = re.findall(Pattern, Error)
+        #     for IncludePath in IncludePaths:
+        #         self._ParseDefines(IncludePath, HeaderDict)
+        # else:
+        #     for HeaderFile in HeaderFiles:
+        #         FileList = self._FindIncludeHeaderFile(self.Options.IncludePaths, HeaderFile)
+        #         CppHeader = None
+        #         for File in FileList:
+        #             if File.find(HeaderFile.replace("/", "\\")) != -1:
+        #                 CppHeader = CppHeaderParser.CppHeader(File)
+        #                 self._ParseDefines(File, HeaderDict)
+        #         if CppHeader is None:
+        #             EdkLogger.error(
+        #                 "VfrCompiler",
+        #                 FILE_NOT_FOUND,
+        #                 "File/directory %s not found in workspace" % (HeaderFile),
+        #                 None
+        #             )
+        #         self._ParseRecursiveHeader(CppHeader, HeaderDict)
 
-    #     return HeaderDict
+        return HeaderDict
 
     # def _ParseRecursiveHeader(self, CppHeader, HeaderDict):
     #     if CppHeader is not None:
