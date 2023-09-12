@@ -237,7 +237,7 @@ class PreProcessDB:
     #                     "VfrCompiler",
     #                     FILE_NOT_FOUND,
     #                     "File/directory %s not found in workspace" % Include,
-    #                     None
+    #                     NonePy
     #                 )
 
     def _GetVfrDicts(self):
