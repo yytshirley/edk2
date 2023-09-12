@@ -1,15 +1,17 @@
 # Generated from VfrSyntax.g4 by ANTLR 4.7.2
 from antlr4 import *
 from io import StringIO
-from typing.io import TextIO
+from typing import TextIO
 import sys
 
 
 
-from IfrCtypes import *
-from IfrFormPkg import *
-from IfrUtility import *
-from IfrTree import *
+from VfrCompiler.IfrCtypes import *
+from VfrCompiler.IfrFormPkg import *
+from VfrCompiler.IfrUtility import *
+from VfrCompiler.IfrTree import *
+from VfrCompiler.IfrError import *
+from VfrCompiler.IfrPreProcess import *
 
 
 

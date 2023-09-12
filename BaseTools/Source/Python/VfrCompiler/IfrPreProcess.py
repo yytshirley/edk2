@@ -1,13 +1,21 @@
-import yaml
+## @file
+# The file is used to preprocess the source file.
+#
+# Copyright (c) 2022-, Intel Corporation. All rights reserved.<BR>
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
 import re
-import os
 import json
 import subprocess
-import CppHeaderParser
+# import CppHeaderParser
+import Common.EdkLogger as EdkLogger
 from antlr4 import *
-from VfrCompiler.IfrFormPkg import *
-from VfrCompiler.IfrCtypes import *
+from pathlib import Path
+from Common.BuildToolError import *
+from VfrCompiler.IfrCtypes import EFI_GUID
+from VfrCompiler.IfrUtility import VfrVarDataTypeDB
 from Common.LongFilePathSupport import LongFilePath
+from VfrCompiler.IfrCommon import GUID_BUFFER_VALUE_LEN
 
 
 class Options:
@@ -40,7 +48,8 @@ class Options:
         self.CreateJsonFile = True
         self.JsonFileName = None
         self.UniStrDefFileName = None
-
+        self.YamlOutputFileName = None
+        self.UniStrDisplayFile = None
 
 class KV:
     def __init__(self, Key, Value) -> None:
@@ -65,7 +74,7 @@ class PreProcessDB:
         # Read Guid definitions in Header files
         self.HeaderDict = self._GetHeaderDicts(self.HeaderFiles)
         # Read Uni string token/id definitions in StrDef.h file
-        self.UniDict = self._GetUniDicts()
+        self.UniDict, self.UniDisPlayDict = self._GetUniDicts()
         # Read definitions in vfr file
         self.VfrDict = self._GetVfrDicts()
         self.Preprocessed = True
@@ -87,128 +96,149 @@ class PreProcessDB:
     def RevertValue(self, Value) -> str:
         if type(Value) == EFI_GUID:
             return Value.to_string()
+        elif ("0x" in Value) or ("0X" in Value):
+            StrValue = hex(Value)
         else:
-            if ("0x" in Value) or ("0X" in Value):
-                StrValue = hex(Value)
-            else:
-                StrValue = str(Value)
+            StrValue = str(Value)
         return StrValue
 
     def DisplayValue(self, Value, Flag=False):
         if type(Value) == EFI_GUID:
             return Value.to_string()
-        else:
-            StrValue = str(Value)
-            if self._IsDigit(StrValue):
-                if Flag:
-                    return "STRING_TOKEN" + "(" + StrValue + ")"
-                else:
-                    return int(StrValue, 0)
-
-            return StrValue
+        StrValue = str(Value)
+        if self._IsDigit(StrValue):
+            if Flag:
+                return f"STRING_TOKEN({StrValue})"
+            return int(StrValue, 0)
+        return StrValue
 
     def GetKey(self, Value):
         if type(Value) == EFI_GUID:
             Value = Value.to_string()
-            if Value in self.UniDict.keys():
+            if Value in self.UniDict:
                 return self.UniDict[Value]
-            if Value in self.VfrDict.keys():
+            if Value in self.VfrDict:
                 return self.VfrDict[Value]
-            if Value in self.HeaderDict.keys():
+            if Value in self.HeaderDict:
                 return self.HeaderDict[Value]
         else:
             Value = "0x%04x" % Value
-            if Value in self.UniDict.keys():
+            Value = Value[:2] + Value[2:].upper()
+            if Value in self.UniDict:
                 return self.UniDict[Value]
         return Value
 
     def _ExtractHeaderFiles(self):
         FileName = self.Options.InputFileName
+        HeaderFiles = []
         try:
-            fFile = open(LongFilePath(FileName), mode="r")
-            line = fFile.readline()
-            IsHeaderLine = False
-            HeaderFiles = []
-            while line:
+            with open(LongFilePath(FileName), mode="r") as fFile:
+                lines = fFile.readlines()
+            for line in lines:
                 if "#include" in line:
-                    IsHeaderLine = True
                     if line.find("<") != -1:
                         HeaderFile = line[line.find("<") + 1 : line.find(">")]
                         HeaderFiles.append(HeaderFile)
-                    if line.find('"') != -1:
+                    elif line.find('"') != -1:
                         l = line.find('"') + 1
                         r = l + line[l:].find('"')
                         HeaderFile = line[l:r]
                         HeaderFiles.append(HeaderFile)
-                line = fFile.readline()
-                if IsHeaderLine == True and "#include" not in line:
-                    break
-            fFile.close()
-        except:
-            EdkLogger.error("VfrCompiler", FILE_PARSE_FAILURE, "File parse failed for %s" % FileName, None)
+        except Exception:
+            EdkLogger.error(
+                "VfrCompiler", FILE_PARSE_FAILURE, "File parse failed for %s" % FileName, None
+            )
         return HeaderFiles
 
     def _GetUniDicts(self):
-        if self.Options.UniStrDefFileName == None:
-            self.Options.UniStrDefFileName = self.Options.DebugDirectory + self.Options.ModuleName + "StrDefs.h"
+        if self.Options.UniStrDefFileName is None:
+            self.Options.UniStrDefFileName = str(
+                Path(self.Options.DebugDirectory) / f"{self.Options.ModuleName}StrDefs.h"
+            )
         # find UniFile
         FileName = self.Options.UniStrDefFileName
-        with open(FileName, "r") as File:
-            Content = File.read()
         UniDict = {}
         self._ParseDefines(FileName, UniDict)
+        DisPlayUniDict = {}
+        if self.Options.UniStrDisplayFile is None:
+            self.Options.UniStrDisplayFile = str(Path(self.Options.OutputDirectory) / f"{self.Options.ModuleName}Uni.json")
+        # String Token : DisPlay String}
+        # if self.Options.LanuchYamlCompiler:
+        print(self.Options.BaseFileName)
+        print(self.Options.UniStrDisplayFile)
+        with open(self.Options.UniStrDisplayFile) as f:
+            Dict = json.load(f)
+        Dict = Dict["OrderedStringTestDict"]["en-US"]
+        for Key in Dict.keys():
+            for UniKey in UniDict.keys():
+                if Key == UniDict[UniKey]:
+                    # NewKey = "{}".format("0x%04x" % (int(UniKey, 0)))
+                    DisPlayUniDict[UniKey] = Dict[Key]
+                    break
 
-        return UniDict
+        return UniDict, DisPlayUniDict
 
-    def _GetHeaderDicts(self, HeaderFiles):
-        HeaderDict = {}
-        VFRrespPath  = os.path.join(self.Options.OutputDirectory, "vfrpp_resp.txt")
-        if os.path.exists(VFRrespPath):
-            Command = [
-                rf"{self.Options.VFRPP}",
-                "/showIncludes",
-                f"@{VFRrespPath}",
-                self.Options.InputFileName
-            ]
-            try:
-                Process = subprocess.Popen(Command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-                _, Error = Process.communicate()
-            except subprocess.CalledProcessError as e:
-                print(f"Error executing command: {e}")
-                EdkLogger.error("VfrCompiler", COMMAND_FAILURE, ' '.join(Command))
-            Pattern = r'Note: including file:\s+(.*)'
-            IncludePaths = re.findall(Pattern, Error)
-            for IncludePath in IncludePaths:
-                self._ParseDefines(IncludePath, HeaderDict)
-        else:
-            for HeaderFile in HeaderFiles:
-                FileList = self._FindIncludeHeaderFile(self.Options.IncludePaths, HeaderFile)
-                CppHeader = None
-                for File in FileList:
-                    if File.find(HeaderFile.replace("/", "\\")) != -1:
-                        CppHeader = CppHeaderParser.CppHeader(File)
-                        self._ParseDefines(File, HeaderDict)
-                if CppHeader == None:
-                    EdkLogger.error("VfrCompiler", FILE_NOT_FOUND, "File/directory %s not found in workspace" % (HeaderFile), None)
-                self._ParseRecursiveHeader(CppHeader, HeaderDict)
+    # def _GetHeaderDicts(self, HeaderFiles):
+    #     HeaderDict = {}
+    #     VFRrespPath = Path(self.Options.OutputDirectory) / "vfrpp_resp.txt"
+    #     if VFRrespPath.exists():
+    #         Command = [
+    #             rf"{self.Options.VFRPP}",
+    #             "/showIncludes",
+    #             f"@{VFRrespPath}",
+    #             self.Options.InputFileName,
+    #         ]
+    #         try:
+    #             Process = subprocess.Popen(
+    #                 Command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True
+    #             )
+    #             _, Error = Process.communicate()
+    #         except subprocess.CalledProcessError as e:
+    #             EdkLogger.error("VfrCompiler", COMMAND_FAILURE, " ".join(Command))
+    #         Pattern = r"Note: including file:\s+(.*)"
+    #         IncludePaths = re.findall(Pattern, Error)
+    #         for IncludePath in IncludePaths:
+    #             self._ParseDefines(IncludePath, HeaderDict)
+    #     else:
+    #         for HeaderFile in HeaderFiles:
+    #             FileList = self._FindIncludeHeaderFile(self.Options.IncludePaths, HeaderFile)
+    #             CppHeader = None
+    #             for File in FileList:
+    #                 if File.find(HeaderFile.replace("/", "\\")) != -1:
+    #                     CppHeader = CppHeaderParser.CppHeader(File)
+    #                     self._ParseDefines(File, HeaderDict)
+    #             if CppHeader is None:
+    #                 EdkLogger.error(
+    #                     "VfrCompiler",
+    #                     FILE_NOT_FOUND,
+    #                     "File/directory %s not found in workspace" % (HeaderFile),
+    #                     None
+    #                 )
+    #             self._ParseRecursiveHeader(CppHeader, HeaderDict)
 
-        return HeaderDict
+    #     return HeaderDict
 
-    def _ParseRecursiveHeader(self, CppHeader, HeaderDict):
-        if CppHeader != None:
-            for Include in CppHeader.includes:
-                Include = Include[1:-1]
-                IncludeHeaderFileList = self._FindIncludeHeaderFile(self.Options.IncludePaths, Include)
-                Flag = False
-                for File in IncludeHeaderFileList:
-                    if File.find(Include.replace("/", "\\")) != -1:
-                        NewCppHeader = CppHeaderParser.CppHeader(File)
-                        self._ParseRecursiveHeader(NewCppHeader, HeaderDict)
-                        self._ParseDefines(File, HeaderDict)
-                        Flag = True
-                if Flag == False:
-                    EdkLogger.error("VfrCompiler", FILE_NOT_FOUND, "File/directory %s not found in workspace" % Include, None)
-
+    # def _ParseRecursiveHeader(self, CppHeader, HeaderDict):
+    #     if CppHeader is not None:
+    #         for Include in CppHeader.includes:
+    #             Include = Include[1:-1]
+    #             IncludeHeaderFileList = self._FindIncludeHeaderFile(
+    #                 self.Options.IncludePaths, Include
+    #             )
+    #             Flag = False
+    #             for File in IncludeHeaderFileList:
+    #                 if File.find(Include.replace("/", "\\")) != -1:
+    #                     NewCppHeader = CppHeaderParser.CppHeader(File)
+    #                     self._ParseRecursiveHeader(NewCppHeader, HeaderDict)
+    #                     self._ParseDefines(File, HeaderDict)
+    #                     Flag = True
+    #             if Flag is False:
+    #                 EdkLogger.error(
+    #                     "VfrCompiler",
+    #                     FILE_NOT_FOUND,
+    #                     "File/directory %s not found in workspace" % Include,
+    #                     None
+    #                 )
 
     def _GetVfrDicts(self):
         VfrDict = {}
@@ -218,29 +248,28 @@ class PreProcessDB:
         return VfrDict
 
     def _IsDigit(self, String):
-        if String.isdigit():
-            return True
-        elif (String.startswith('0x') or String.startswith('0X')) and all(char in "0123456789ABCDEFabcdef" for char in String[2:]):
-            return True
-        else:
-            return False
+        return String.isdigit() or (
+            String.startswith(('0x', '0X'))
+            and all(char in "0123456789ABCDEFabcdef" for char in String[2:])
+        )
 
     def _ToDigit(self, String):
-        if String.startswith("0x") or String.startswith("0X"):
+        if String.startswith(('0x','0X')):
             return int(String, 16)
-        else:
-            return int(String)
+        return int(String)
 
-    def _ParseDefines(self, FileName, Dict, IsVfrDef = False):
+    def _ParseDefines(self, FileName, Dict, IsVfrDef=False):
         Pattern = r"#define\s+(\w+)\s+(.*?)(?:(?<!\\)\n|$)"
-        with open(FileName, "r") as File:
+        with open(FileName) as File:
             Content = File.read()
 
         Matches = re.findall(Pattern, Content, re.DOTALL)
         for Match in Matches:
             Key = Match[0]
             Value = re.sub(r"\s+", " ", Match[1].replace("\\\n", "").strip())
-            SubDefineMatches = re.findall(r"#define\s+(\w+)\s+(.*?)(?:(?<!\\)\n|$)", Value, re.DOTALL)
+            SubDefineMatches = re.findall(
+                r"#define\s+(\w+)\s+(.*?)(?:(?<!\\)\n|$)", Value, re.DOTALL
+            )
             if SubDefineMatches:
                 for SubMatch in SubDefineMatches:
                     SubKey = SubMatch[0]
@@ -252,7 +281,7 @@ class PreProcessDB:
                         GuidList = re.findall(r"0x[0-9a-fA-F]+", SubValue)
                         GuidList = [int(num, 16) for num in GuidList]
                         SubValue = EFI_GUID()
-                        if len(GuidList) == 11:
+                        if len(GuidList) == GUID_BUFFER_VALUE_LEN:
                             SubValue.from_list(GuidList)
 
                     if self.Options.LanuchVfrCompiler:
@@ -264,9 +293,11 @@ class PreProcessDB:
                             if type(SubValue) == EFI_GUID:
                                 Dict[SubValue.to_string()] = SubKey
                         else:
-                            SubValue = str(SubValue) if type(SubValue) != EFI_GUID else SubValue.to_string()
-                            if self._IsDigit(SubValue):
-                                SubValue = "0x%04x" % self._ToDigit(SubValue)
+                            SubValue = (
+                                str(SubValue)
+                                if type(SubValue) != EFI_GUID
+                                else SubValue.to_string()
+                            )
                             Dict[SubValue] = SubKey
             else:
                 if Value.find("//") != -1:
@@ -275,7 +306,7 @@ class PreProcessDB:
                     GuidList = re.findall(r"0x[0-9a-fA-F]+", Value)
                     GuidList = [int(num, 16) for num in GuidList]
                     Value = EFI_GUID()
-                    if len(GuidList) == 11:
+                    if len(GuidList) == GUID_BUFFER_VALUE_LEN:
                         Value.from_list(GuidList)
 
                 if self.Options.LanuchVfrCompiler:
@@ -286,19 +317,13 @@ class PreProcessDB:
                             Dict[Value.to_string()] = Key
                     else:
                         Value = str(Value) if type(Value) != EFI_GUID else Value.to_string()
-                        if self._IsDigit(Value):
-                            Value = "0x%04x" % self._ToDigit(Value)
                         Dict[Value] = Key
 
     def _FindIncludeHeaderFile(self, IncludePaths, File):
-        Name = File.split("/")[-1]
         FileList = []
+        Name = File.split("/")[-1]
         for Start in IncludePaths:
-            for Relpath, Dirs, Files in os.walk(Start):
-                if Name in Files:
-                    FullPath = os.path.join(Start, Relpath, Name)
-                    FullPath = FullPath.replace("\\", "/")
-                    if FullPath.find(File) != -1:
-                        FileList.append(os.path.normpath(os.path.abspath(FullPath)))
-
+            Matches = list(Path(Start).rglob(Name))
+            for MatchFile in Matches:
+                FileList.append(str(MatchFile))
         return list(set(FileList))

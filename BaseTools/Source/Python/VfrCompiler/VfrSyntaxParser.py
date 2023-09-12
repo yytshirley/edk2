@@ -2,16 +2,17 @@
 # encoding: utf-8
 from antlr4 import *
 from io import StringIO
-from typing.io import TextIO
+from typing import TextIO
 import sys
 
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from IfrCtypes import *
-from IfrFormPkg import *
-from IfrUtility import *
-from IfrTree import *
+from VfrCompiler.IfrCtypes import *
+from VfrCompiler.IfrFormPkg import *
+from VfrCompiler.IfrUtility import *
+from VfrCompiler.IfrTree import *
+from VfrCompiler.IfrError import *
+from VfrCompiler.IfrPreProcess import *
 
 
 def serializedATN():
@@ -20473,8 +20474,3 @@ class VfrSyntaxParser ( Parser ):
         finally:
             self.exitRule()
         return localctx
-
-
-
-
-

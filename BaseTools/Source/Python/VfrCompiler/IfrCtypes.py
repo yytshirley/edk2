@@ -1,11 +1,16 @@
-import uuid
-import ctypes
-from ctypes import *
+## @file
+# This file is used to define the common C struct and functions.
+#
+# Copyright (c) 2022-, Intel Corporation. All rights reserved.<BR>
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+# import uuid
 from re import A, X
+from ctypes import *
 from telnetlib import X3PAD
 from tkinter import YView
-from VfrCompiler.IfrError import *
 from struct import *
+from enum import Enum
 
 
 EFI_STRING_ID_INVALID = 0x0
@@ -56,9 +61,13 @@ MAX_IFR_EXPRESSION_DEPTH = 0x9
 INVALID_ARRAY_INDEX = 0xFFFFFFFF
 
 EFI_IFR_TYPE_NUM_SIZE_8 = 0x00
+EFI_IFR_TYPE_NUM_8_BIT_SIZE = 0x01
 EFI_IFR_TYPE_NUM_SIZE_16 = 0x01
+EFI_IFR_TYPE_NUM_16_BIT_SIZE = 0x02
 EFI_IFR_TYPE_NUM_SIZE_32 = 0x02
+EFI_IFR_TYPE_NUM_32_BIT_SIZE = 0x04
 EFI_IFR_TYPE_NUM_SIZE_64 = 0x03
+EFI_IFR_TYPE_NUM_64_BIT_SIZE = 0x08
 EFI_IFR_TYPE_BOOLEAN = 0x04
 EFI_IFR_TYPE_TIME = 0x05
 EFI_IFR_TYPE_DATE = 0x06
@@ -115,7 +124,6 @@ BasicTypes = [
 ]
 BasicCInts = [c_uint64, c_uint32, c_uint16, c_uint8, c_ubyte, c_ushort]
 
-
 class EFI_GUID(Structure):
     _pack_ = 1
     _fields_ = [
@@ -133,29 +141,19 @@ class EFI_GUID(Structure):
             self.Data4[i] = listformat[i + 3]
 
     def to_string(self) -> str:
-        GuidStr = (
-            "{"
-            + "{}, {}, {}, ".format("0x%x" % (self.Data1), "0x%x" % (self.Data2), "0x%x" % (self.Data3))
-            + "{"
-            + "{}, {}, {}, {}, {}, {}, {}, {}".format(
-                "0x%x" % (self.Data4[0]),
-                "0x%x" % (self.Data4[1]),
-                "0x%x" % (self.Data4[2]),
-                "0x%x" % (self.Data4[3]),
-                "0x%x" % (self.Data4[4]),
-                "0x%x" % (self.Data4[5]),
-                "0x%x" % (self.Data4[6]),
-                "0x%x" % (self.Data4[7]),
-            )
-            + "}}"
-        )
+        GuidStr = f"{{{self.Data1:#x}, {self.Data2:#x}, {self.Data3:#x}, {{ {', '.join(f'{x:#x}' for x in self.Data4)}}}}}"
+
         return GuidStr
 
     def __cmp__(self, otherguid) -> bool:
         if not isinstance(otherguid, EFI_GUID):
             return "Input is not the GUID instance!"
         rt = False
-        if self.Data1 == otherguid.Data1 and self.Data2 == otherguid.Data2 and self.Data3 == otherguid.Data3:
+        if (
+            self.Data1 == otherguid.Data1
+            and self.Data2 == otherguid.Data2
+            and self.Data3 == otherguid.Data3
+        ):
             rt = True
             for i in range(8):
                 rt = rt & (self.Data4[i] == otherguid.Data4[i])
@@ -167,7 +165,9 @@ EFI_HII_PLATFORM_SETUP_FORMSET_GUID = EFI_GUID(
     0x93039971, 0x8545, 0x4B04, GuidArray(0xB4, 0x5E, 0x32, 0xEB, 0x83, 0x26, 0x4, 0xE)
 )
 
-EFI_IFR_TIANO_GUID = EFI_GUID(0xF0B1735, 0x87A0, 0x4193, GuidArray(0xB2, 0x66, 0x53, 0x8C, 0x38, 0xAF, 0x48, 0xCE))
+EFI_IFR_TIANO_GUID = EFI_GUID(
+    0xF0B1735, 0x87A0, 0x4193, GuidArray(0xB2, 0x66, 0x53, 0x8C, 0x38, 0xAF, 0x48, 0xCE)
+)
 
 EDKII_IFR_BIT_VARSTORE_GUID = (
     0x82DDD68B,
@@ -337,6 +337,7 @@ def Refine_EFI_IFR_BIT(Type, PreBits, Size, Data):
 
             def __init__(self, Data):
                 self.Data = Data
+
     elif sizeof(Type) * 8 - Size - PreBits == 0:
 
         class Refine_EFI_IFR_BIT(Structure):
@@ -348,7 +349,9 @@ def Refine_EFI_IFR_BIT(Type, PreBits, Size, Data):
 
             def __init__(self, Data):
                 self.Data = Data
+
     else:
+
         class Refine_EFI_IFR_BIT(Structure):
             _pack_ = 1
             _fields_ = [
@@ -620,7 +623,6 @@ class EFI_IFR_NUMERIC(Structure):
 
 
 def Refine_EFI_IFR_NUMERIC(Type):
-
     if Type == EFI_IFR_TYPE_NUM_SIZE_8:
         DataType = u8Node
     elif Type == EFI_IFR_TYPE_NUM_SIZE_16:
@@ -631,6 +633,7 @@ def Refine_EFI_IFR_NUMERIC(Type):
         DataType = u64Node
     else:
         DataType = u32Node
+
     class EFI_IFR_NUMERIC(Structure):
         _pack_ = 1
         _fields_ = [
@@ -1783,6 +1786,7 @@ BasicDataTypes = [
 
 def Refine_EFI_IFR_GUID_OPTIONKEY(Type):
     ValueType = TypeDict[Type]
+
     class EFI_IFR_GUID_OPTIONKEY(Structure):
         _pack_ = 1
         _fields_ = [

@@ -675,16 +675,29 @@ class UniFileClassObject(object):
     #
     # Show the instance itself
     #
+
     def ShowMe(self, outputdictfile):
+        output_data = {
+            "LanguageDefDict": self.LanguageDefDict,
+            "OrderedStringTestDict": self.OrderedStringTestDict
+        }
+
         with open(outputdictfile, 'w') as outputfile:
-            outputdict = {}
-            outputdict['LanguageDef'] = self.LanguageDef
-            outputdict['UniString'] = self.OrderedStringTestDict
-            json.dump(outputdict, outputfile, indent=4)
-        for Item in self.OrderedStringList:
-            print(Item)
-            for Member in self.OrderedStringList[Item]:
-                print(str(Member))
+            json.dump(output_data, outputfile, indent=4)
+
+    # def ShowMe(self, outputdictfile):
+    #     with open(outputdictfile, 'w') as outputfile:
+    #         json.dump(self.LanguageDefDict, outputfile, indent=4)
+    #         json.dump(self.OrderedStringTestDict, outputfile, indent=4)
+        # with open(outputdictfile, 'w') as outputfile:
+        #     outputdict = {}
+        #     outputdict['LanguageDef'] = self.LanguageDef
+        #     outputdict['UniString'] = self.OrderedStringTestDict
+        #     json.dump(outputdict, outputfile, indent=4)
+        # for Item in self.OrderedStringList:
+        #     print(Item)
+        #     for Member in self.OrderedStringList[Item]:
+        #         print(str(Member))
 
 # This acts like the main() function for the script, unless it is 'import'ed into another
 # script.

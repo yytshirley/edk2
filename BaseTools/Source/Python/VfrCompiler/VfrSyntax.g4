@@ -1,13 +1,21 @@
+//// @file
+// vfr syntax
+//
+// Copyright (c) 2022-, Intel Corporation. All rights reserved.<BR>
+// SPDX-License-Identifier: BSD-2-Clause-Patent
+////
 grammar VfrSyntax;
 options {
     language=Python;
 }
 @header{
 
-from IfrCtypes import *
-from IfrFormPkg import *
-from IfrUtility import *
-from IfrTree import *
+from VfrCompiler.IfrCtypes import *
+from VfrCompiler.IfrFormPkg import *
+from VfrCompiler.IfrUtility import *
+from VfrCompiler.IfrTree import *
+from VfrCompiler.IfrError import *
+from VfrCompiler.IfrPreProcess import *
 }
 
 vfrProgram

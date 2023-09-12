@@ -1,7 +1,12 @@
-import Common.EdkLogger as EdkLogger
+## @file
+# VfrCompiler error handler.
+#
+# Copyright (c) 2022-, Intel Corporation. All rights reserved.<BR>
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
 from enum import Enum
+from Common import EdkLogger
 from Common.BuildToolError import *
-
 
 class VfrReturnCode(Enum):
     VFR_RETURN_SUCCESS = 0
@@ -98,7 +103,7 @@ class VfrErrorHandle:
         self.InputFileName = InputFile
 
     def HandleWarning(self, WarningCode, LineNum=None, TokenValue=None):
-        if self.vfrWarningMessage == None:
+        if self.vfrWarningMessage is None:
             return 1
         WarningMsg = ""
         for key in self.vfrWarningMessage.keys():
@@ -117,7 +122,7 @@ class VfrErrorHandle:
             EdkLogger.error("VfrCompiler", FORMAT_INVALID, ErrorMsg, self.InputFileName, LineNum, TokenValue)
 
     def HandleError(self, ErrorCode, LineNum=None, TokenValue=None):
-        if self.vfrErrorMessage == None:
+        if self.vfrErrorMessage is None:
             return 1
         ErrorMsg = ""
         for Key in self.vfrErrorMessage.keys():
@@ -127,8 +132,7 @@ class VfrErrorHandle:
         if ErrorMsg != "":
             EdkLogger.error("VfrCompiler", ErrorCode.value, ErrorMsg, self.InputFileName, LineNum, TokenValue)
             return 1
-        else:
-            return 0
+        return 0
 
 
 gVfrErrorHandle = VfrErrorHandle()

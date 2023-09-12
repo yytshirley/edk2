@@ -2109,4 +2109,3 @@ def CreateCode(Info, AutoGenC, AutoGenH, StringH, UniGenCFlag, UniGenBinBuffer, 
 #
 def Generate(FilePath, Content, IsBinaryFile):
     return SaveFileOnChange(FilePath, Content, IsBinaryFile)
-

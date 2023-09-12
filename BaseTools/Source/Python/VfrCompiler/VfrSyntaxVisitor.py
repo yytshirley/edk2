@@ -1,5 +1,9 @@
-import ctypes
-import struct
+## @file
+# The file is defined to parse Vfr syntax
+#
+# Copyright (c) 2022-, Intel Corporation. All rights reserved.<BR>
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
 from cgi import print_environ_usage
 from email.errors import NonASCIILocalPartDefect, NonPrintableDefect
 from enum import Flag
@@ -12,10 +16,12 @@ from re import T
 from sre_parse import FLAGS
 from tokenize import Number
 from antlr4 import *
-from IfrCtypes import *
-from IfrFormPkg import *
-from IfrUtility import *
-from IfrTree import *
+from VfrCompiler.IfrCtypes import *
+from VfrCompiler.IfrFormPkg import *
+from VfrCompiler.IfrUtility import *
+from VfrCompiler.IfrTree import *
+from VfrCompiler.IfrError import *
+from VfrCompiler.IfrPreProcess import *
 
 if __name__ is not None and "." in __name__:
     from .VfrSyntaxParser import VfrSyntaxParser
@@ -601,9 +607,9 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             Attributes |= ctx.vfrVarStoreEfiAttr(i).Attr
 
             if i != len(ctx.vfrVarStoreEfiAttr()) - 1:
-                AttributesText += '{} | '.format('0x%08x'% (ctx.vfrVarStoreEfiAttr(i).Attr))
+                AttributesText += f"{ctx.vfrVarStoreEfiAttr(i).Attr:#010x} | "
             else:
-                AttributesText += '{}'.format('0x%08x'% (ctx.vfrVarStoreEfiAttr(i).Attr))
+                AttributesText += f"{ctx.vfrVarStoreEfiAttr(i).Attr:#010x}"
 
         if ctx.SN != None:
             StoreName = ctx.SN.text
@@ -709,7 +715,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         DIObj.SetLineNo(ctx.start.line)
         self.ConstantOnlyInExpression = True
         ctx.Node.Data = DIObj
-        # ctx.Node.Condition = 'disableif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        ctx.Node.Condition = 'disableif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
         ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
         self.visitChildren(ctx)
         self.InsertEndNode(ctx.Node, ctx.stop.line)
@@ -722,7 +728,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         SIObj = IfrSuppressIf()
         SIObj.SetLineNo(ctx.start.line)
         ctx.Node.Data = SIObj
-        # ctx.Node.Condition = 'suppressif' + ' ' +  self.ExtractOriginalText(ctx.vfrStatementExpression())
+        ctx.Node.Condition = 'suppressif' + ' ' +  self.ExtractOriginalText(ctx.vfrStatementExpression())
         ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
         self.visitChildren(ctx)
         self.InsertEndNode(ctx.Node, ctx.stop.line)
@@ -1362,8 +1368,9 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
             TObj.SetLineNo(Line)
             TObj.SetHelp(Help)
             TObj.SetPrompt(Prompt)
-            TObj.SetTextTwo(TxtTwo)
-            TObj.SetHasTextTwo(True)
+            if TxtTwo != EFI_STRING_ID_INVALID:
+                TObj.SetTextTwo(TxtTwo)
+                TObj.SetHasTextTwo(True)
             ctx.Node.Data = TObj
             ctx.Node.Buffer = gFormPkg.StructToStream(TObj.GetInfo())
 
@@ -1575,7 +1582,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
     # Visit a parse tree produced by VfrSyntaxParser#vfrStatementInconsistentIf.
     def visitVfrStatementInconsistentIf(self, ctx:VfrSyntaxParser.VfrStatementInconsistentIfContext):
 
-        IIObj = IfrInconsistentIf()
+        IIObj = IfrInconsistentIf2()
         self.visitChildren(ctx)
 
         IIObj.SetLineNo(ctx.start.line)
@@ -1591,6 +1598,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
 
         ctx.Node.Data = IIObj
         ctx.Node.Buffer = gFormPkg.StructToStream(IIObj.GetInfo())
+        ctx.Node.Condition = 'inconsistentif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
         ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
         self.InsertEndNode(ctx.Node, ctx.stop.line)
 
@@ -1628,7 +1636,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         DIObj.SetLineNo(ctx.start.line)
         ctx.Node.Data = DIObj
         ctx.Node.Buffer = gFormPkg.StructToStream(DIObj.GetInfo())
-        # ctx.Node.Condition = 'disableif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        ctx.Node.Condition = 'disableif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
         ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
         self.InsertEndNode(ctx.Node, ctx.stop.line)
 
@@ -1730,7 +1738,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         SIObj = IfrSuppressIf()
         SIObj.SetLineNo(ctx.start.line)
         ctx.Node.Data = SIObj
-        # ctx.Node.Condition = 'suppressif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        ctx.Node.Condition = 'suppressif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
         ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
         self.visitChildren(ctx)
         ctx.Node.Buffer = gFormPkg.StructToStream(SIObj.GetInfo())
@@ -1743,7 +1751,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         GOIObj = IfrGrayOutIf()
         GOIObj.SetLineNo(ctx.start.line)
         ctx.Node.Data = GOIObj
-        # ctx.Node.Condition = 'grayoutif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        ctx.Node.Condition = 'grayoutif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
         ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
         self.visitChildren(ctx)
         ctx.Node.Buffer = gFormPkg.StructToStream(GOIObj.GetInfo())
@@ -2074,7 +2082,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
                     self.ErrorHandler(ReturnCode, Line, "CheckBox varid is not the valid data type")
                     if Size != 0 and Size != self.CurrQestVarInfo.VarTotalSize:
                         self.ErrorHandler(VfrReturnCode.VFR_RETURN_INVALID_PARAMETER, Line, "CheckBox varid doesn't support array")
-                    elif gVfrDataStorage.GetVarStoreType(self.CurrQestVarInfo.VarStoreId) == EFI_VFR_VARSTORE_TYPE.EFI_VFR_VARSTORE_BUFFER and self.CurrQestVarInfo.VarTotalSize != sizeof(ctypes.c_bool):
+                    elif gVfrDataStorage.GetVarStoreType(self.CurrQestVarInfo.VarStoreId) == EFI_VFR_VARSTORE_TYPE.EFI_VFR_VARSTORE_BUFFER and self.CurrQestVarInfo.VarTotalSize != sizeof(c_bool):
                         self.ErrorHandler(VfrReturnCode.VFR_RETURN_INVALID_PARAMETER, Line, "CheckBox varid only support BOOLEAN data type")
 
         if ctx.FLAGS() != None:
@@ -3207,7 +3215,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         DIObj.SetLineNo(ctx.start.line)
         ctx.Node.Data = DIObj
         ctx.Node.Buffer = gFormPkg.StructToStream(DIObj.GetInfo())
-        # ctx.Node.Condition = 'disableif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        ctx.Node.Condition = 'disableif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
         ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
         self.visitChildren(ctx)
         for Ctx in ctx.vfrStatementStatList():
@@ -3224,7 +3232,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         SIObj.SetLineNo(ctx.start.line)
         ctx.Node.Data = SIObj
         ctx.Node.Buffer = gFormPkg.StructToStream(SIObj.GetInfo())
-        # ctx.Node.Condition = 'suppressif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        ctx.Node.Condition = 'suppressif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
         ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
         self.visitChildren(ctx)
         for Ctx in ctx.vfrStatementStatList():
@@ -3241,7 +3249,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         GOIObj.SetLineNo(ctx.start.line)
         ctx.Node.Data = GOIObj
         ctx.Node.Buffer = gFormPkg.StructToStream(GOIObj.GetInfo())
-        # ctx.Node.Condition = 'grayoutif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        ctx.Node.Condition = 'grayoutif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
         ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
         self.visitChildren(ctx)
         for Ctx in ctx.vfrStatementStatList():
@@ -3262,7 +3270,7 @@ class VfrSyntaxVisitor(ParseTreeVisitor):
         IIObj.SetError(self.TransNum(ctx.Number()))
         ctx.Node.Data = IIObj
         ctx.Node.Buffer = gFormPkg.StructToStream(IIObj.GetInfo())
-        # ctx.Node.Condition = 'inconsistentif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
+        ctx.Node.Condition = 'inconsistentif' + ' ' + self.ExtractOriginalText(ctx.vfrStatementExpression())
         ctx.Node.Expression = self.ExtractOriginalText(ctx.vfrStatementExpression())
         self.InsertEndNode(ctx.Node, ctx.stop.line)
 

@@ -1,4 +1,12 @@
-from VfrCompiler.IfrCtypes import *
+## @file
+# This file is used to define common funtions.
+#
+# Copyright (c) 2022-, Intel Corporation. All rights reserved.<BR>
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+import Common.EdkLogger as EdkLogger
+from VfrCompiler.IfrCtypes import EFI_GUID
+from Common.BuildToolError import PARAMETER_INVALID
 
 # Enumeration of EFI_STATUS.
 RETURN_SUCCESS = EFI_SUCCESS = 0
@@ -10,41 +18,43 @@ EFI_NOT_FOUND = 0x8000000000000000 | (14)
 RETURN_INVALID_PARAMETER = 0x8000000000000000 | (2)
 RETURN_UNSUPPORTED = 0x8000000000000000 | (3)
 
+ASCII_GUID_BUFFER_INDEX_1 = 8
+ASCII_GUID_BUFFER_INDEX_2 = 13
+ASCII_GUID_BUFFER_INDEX_3 = 18
+ASCII_GUID_BUFFER_INDEX_4 = 23
+ASCII_GUID_BUFFER_MAX_INDEX = 36
+GUID_BUFFER_VALUE_LEN = 11
+
 
 def EFI_ERROR(A):
-    if A < 0:
-        return True
-    else:
-        return False
-
+    return A < 0
 
 # Converts a string to an EFI_GUID.
 def StringToGuid(AsciiGuidBuffer: str, GuidBuffer: EFI_GUID):
     Data4 = [0] * 8
-    if AsciiGuidBuffer == None or GuidBuffer == None:
+    if AsciiGuidBuffer is None or GuidBuffer is None:
         return EFI_INVALID_PARAMETER
     Index = 0
-    while Index < 36:
-        if Index == 8 or Index == 13 or Index == 18 or Index == 23:
+    while Index < ASCII_GUID_BUFFER_MAX_INDEX:
+        if Index == ASCII_GUID_BUFFER_INDEX_1 or Index == ASCII_GUID_BUFFER_INDEX_2 or Index == ASCII_GUID_BUFFER_INDEX_3 or Index == ASCII_GUID_BUFFER_INDEX_4:
             if AsciiGuidBuffer[Index] != "-":
                 break
-        else:
-            if (
+        elif (
                 (AsciiGuidBuffer[Index] >= "0" and AsciiGuidBuffer[Index] <= "9")
                 or (AsciiGuidBuffer[Index] >= "a" and AsciiGuidBuffer[Index] <= "f")
                 or (AsciiGuidBuffer[Index] >= "A" and AsciiGuidBuffer[Index] <= "F")
             ):
-                Index += 1
-                continue
-            else:
-                break
+            Index += 1
+            continue
+        else:
+            break
         Index += 1
         continue
 
-    if Index < 36:
+    if Index < ASCII_GUID_BUFFER_MAX_INDEX:
         EdkLogger.error("VfrCompiler", PARAMETER_INVALID, "Invalid option value")
         return EFI_ABORTED
-    Index = 11
+    Index = GUID_BUFFER_VALUE_LEN
     try:
         Data1 = int(AsciiGuidBuffer[0:8], 16)
         Data2 = int(AsciiGuidBuffer[9:13], 16)
@@ -57,12 +67,12 @@ def StringToGuid(AsciiGuidBuffer: str, GuidBuffer: EFI_GUID):
         Data4[5] = int(AsciiGuidBuffer[30:32], 16)
         Data4[6] = int(AsciiGuidBuffer[32:34], 16)
         Data4[7] = int(AsciiGuidBuffer[34:36], 16)
-    except:
+    except Exception:
         EdkLogger.error("VfrCompiler", PARAMETER_INVALID, "Invalid Data value!")
         Index = 0
 
     # Verify the correct number of items were scanned.
-    if Index != 11:
+    if Index != GUID_BUFFER_VALUE_LEN:
         EdkLogger.error("VfrCompiler", PARAMETER_INVALID, "Invalid option value")
         return EFI_ABORTED
 
