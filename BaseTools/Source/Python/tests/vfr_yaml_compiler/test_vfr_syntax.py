@@ -37,7 +37,7 @@ class TestVfrcompilFunc:
         Test Struct Definition
         """
         structInput = [
-            'struct.i',
+            'VfrFuncSrc/struct.i',
         ]
         exceptOutput = [
             {
@@ -70,12 +70,15 @@ class TestVfrcompilFunc:
                 element = element.Next
                 i += 1
 
+    def test_VfrDataUnionDefinition(self):
+        pass
+
     def test_VfrFormSetDefinition(self):
         """
         Test formset format.
         """
         formsetList = [
-            'formset.i',
+            'VfrFuncSrc/formset.i',
         ]
         exceptOutput = [
             """
@@ -270,7 +273,8 @@ class TestVfrcompilFunc:
             )
             self.Visitor.visit(VfrParser.vfrProgram())
             formSetObj = self.Visitor.Root.Child[0]
-            ExceptSrc = [i.strip() for i in exceptOutput[index].split('\n') if i.strip()]
+            ExceptSrc = [i.strip() for i in exceptOutput[index].split('\n') if
+                         i.strip()]
             Buffer = list()
             Buffer.append(formSetObj.Buffer)
             for ch in formSetObj.Child:
@@ -289,21 +293,11 @@ class TestVfrcompilFunc:
                     src = int([s for s in ExceptSrc[i].split(' ') if s][j], 16)
                     assert Buffer[i][j] == int(ExceptSrc[i].split(' ')[j], 16)
 
-    def test_VfrBlock(self):
-        blockInput = [
-            'RamDisk.i'
-        ]
-        for index in range(len(blockInput)):
-            InputStream = FileStream(blockInput[index])
-            VfrLexer = VfrSyntaxLexer(InputStream)
-            VfrStream = CommonTokenStream(VfrLexer)
-            VfrParser = VfrSyntaxParser(VfrStream)
-            self.Visitor = VfrSyntaxVisitor(
-                self.PreProcessDB, self.VfrRoot, self.Options.OverrideClassGuid
-            )
-            self.Visitor.visit(VfrParser.vfrProgram())
-            pass
+    def test_VfrPragmaPackDefinition(self):
+        pass
 
+    def test_PragmaPackShowDef(self):
+        pass
 
 
 if __name__ == '__main__':
