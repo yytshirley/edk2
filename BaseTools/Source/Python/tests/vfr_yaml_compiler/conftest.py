@@ -62,7 +62,6 @@ class Namespace:
         return argv
 
 
-
 def preprocess_data_of_pytestini():
     vfr_compilers.clear()
     conf = ConfigParser()
@@ -73,7 +72,8 @@ def preprocess_data_of_pytestini():
     makefiles = list()
     for floder_path in vars[0][1].strip().split(','):
         if not os.path.isabs(floder_path.replace('\n', '')):
-            file_path= os.path.join(os.path.dirname(__file__), floder_path.replace('\n', ''), 'Makefile')
+            file_path = os.path.join(os.path.dirname(__file__),
+                                     floder_path.replace('\n', ''), 'Makefile')
 
             if os.path.isfile(file_path) and os.path.exists(file_path):
                 makefiles.append(file_path)
@@ -91,13 +91,15 @@ def preprocess_data_of_pytestini():
                 elif re.match(
                         moduleNameRe, line):
                     lines = line.split('=')
-                    scops[lines[0].strip()] = lines[-1].strip().replace('\n', '')
+                    scops[lines[0].strip()] = lines[-1].strip().replace('\n',
+                                                                        '')
                     flag = False
                 elif re.match(outputDirRe, line) or re.match(debugDirRe,
                                                              line):
                     lines = line.split('=')
                     values = lines[-1].strip().split(os.sep)
-                    scops[lines[0].strip()] = os.path.join(os.path.dirname(__file__), values[-2], values[-1])
+                    scops[lines[0].strip()] = os.path.join(
+                        os.path.dirname(__file__), values[-2], values[-1])
                     flag = False
                 elif re.match(incRe, line):
                     flag = True
@@ -106,7 +108,8 @@ def preprocess_data_of_pytestini():
                     flag = False
                 elif re.search(pyvfrRe, line):
                     scops['InputFileName'] = os.path.normpath(
-                        workspace + os.path.normpath(line.split(' ')[1].strip().split('edk2')[-1]))
+                        workspace + os.path.normpath(
+                            line.split(' ')[1].strip().split('edk2')[-1]))
                     lanuch = line.split(' ')[-1].strip()
 
                 else:
@@ -133,7 +136,7 @@ def vfr_compiler(request):
             'ModuleName') else request.param.get('MODULE_NAME'),
         LanuchVfrCompiler=request.param['LanuchVfrCompiler'],
         LanuchYamlCompiler=request.param['LanuchYamlCompiler'],
-        Workspace = request.param.get('Workspace', workspace),
+        Workspace=request.param.get('Workspace', workspace),
     )
     argv = args.get_argv()
     cmd = CmdParser(args, argv)
@@ -152,3 +155,23 @@ def vfr_compiler(request):
         if os.path.exists(compiler.Options.YamlFileName):
             os.remove(compiler.Options.YamlFileName)
 
+
+packNumberInput = [
+    [os.path.join(os.path.dirname(__file__), "TestVfrSourceFile/PackNumber.i"), 1],
+    [os.path.join(os.path.dirname(__file__), "TestVfrSourceFile/PackNumber1.i"), ],
+    [os.path.join(os.path.dirname(__file__), "TestVfrSourceFile/PackNumber2.i"), ]
+]
+
+
+@pytest.fixture(scope='function', params=packNumberInput)
+def PragmaPackNumber(request):
+    return request.param
+
+
+PackStackInput = [
+    [os.path.join(os.path.dirname(__file__), 'TestVfrSourceFile/PackStackpush.i'), 'testPush', 8],
+    [os.path.join(os.path.dirname(__file__), 'TestVfrSourceFile/PackStackPop.i'), 'testPop', 8],
+]
+@pytest.fixture(scope='function', params=PackStackInput)
+def PragmaPackStack(request):
+    return request.param
