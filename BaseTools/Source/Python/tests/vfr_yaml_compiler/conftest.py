@@ -107,10 +107,18 @@ def preprocess_data_of_pytestini():
                 elif '=' in line:
                     flag = False
                 elif re.search(pyvfrRe, line):
-                    scops['InputFileName'] = os.path.normpath(
-                        workspace + os.path.normpath(
-                            line.split(' ')[1].strip().split('edk2')[-1]))
+                    filename = os.path.join(scops["DEBUG_DIR"].replace("DEBUG",''), os.path.basename(line.split(' ')[1]))
                     lanuch = line.split(' ')[-1].strip()
+                    if 'InputFileName' in scops.keys():
+                        newScops = scops.copy()
+                        newScops['InputFileName'] = filename
+                        if lanuch == '--vfr':
+                            newScops['LanuchVfrCompiler'] = True
+                            newScops['LanuchYamlCompiler'] = False
+                            vfr_compilers.append(newScops)
+                        continue
+                    scops['InputFileName'] = filename
+
 
                 else:
                     if flag:

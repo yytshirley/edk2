@@ -5,6 +5,8 @@ import os
 @pytest.mark.usefixtures('vfr_compiler')
 class TestVfrCompiler:
     def test_vfr_preprocess(self):
+        filename = self.compiler.Options.InputFileName
+        print('filename: ', filename)
         self.compiler.PreProcess()
 
     def test_vfr_compiler(self):

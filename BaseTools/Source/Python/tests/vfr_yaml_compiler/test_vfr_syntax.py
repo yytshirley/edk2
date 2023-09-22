@@ -45,10 +45,10 @@ class TestVfrcompilSyntax:
         """
         gVfrVarDataTypeDB.Clear()
         gVfrDataStorage.Clear()
-        gVfrVarDataTypeDB.Clear()
+        gVfrBufferConfig.__init__()
         # gVfrDefaultStore.Clear()
         gVfrDataStorage.Clear()
-        # gFormPkg.Clear()
+        gFormPkg.Clear()
         gIfrFormId.Clear()
         # Options = Options()
         # self.VfrRoot = IfrTreeNode()
@@ -57,7 +57,8 @@ class TestVfrcompilSyntax:
         VfrStream = CommonTokenStream(VfrLexer)
         VfrParser = VfrSyntaxParser(VfrStream)
         self.Visitor = VfrSyntaxVisitor(
-            PreProcessDB(self.Options), IfrTreeNode(), self.Options.OverrideClassGuid
+            PreProcessDB(self.Options), IfrTreeNode(),
+            self.Options.OverrideClassGuid
         )
 
         return VfrParser
@@ -79,7 +80,7 @@ class TestVfrcompilSyntax:
                 elif Flags == "FORMID":
                     for ch in Child.Child:
                         if ch.OpCode == EFI_IFR_FORM_OP:
-                            return ch.Data.Form, len(ch.Child)
+                            return ch.Data.Form, ch.Buffer, ch.Child
                 elif Flags == "FORMMAP":
                     for ch in Child.Child:
                         if ch.OpCode == EFI_IFR_FORM_MAP_OP:
@@ -102,7 +103,7 @@ class TestVfrcompilSyntax:
                 elif Flags == "VARSTORE":
                     for ch in Child.Child:
                         if ch.OpCode == EFI_IFR_VARSTORE_OP:
-                            return ch.Data.Varstore, ch.Data.Type
+                            return ch.Data.Varstore, ch.Data.Type, ch.Buffer
 
                 elif Flags == "DISABLEIF":
                     for ch in Child.Child:
@@ -167,7 +168,8 @@ class TestVfrcompilSyntax:
         Test Struct Definition
         """
         structInput = [
-            os.path.join(os.path.dirname(__file__), 'TestVfrSourceFile/struct.i'),
+            os.path.join(os.path.dirname(__file__),
+                         'TestVfrSourceFile/struct.i'),
         ]
         exceptOutput = [
             {
@@ -197,7 +199,8 @@ class TestVfrcompilSyntax:
 
     def test_VfrDataUnionDefinition(self):
         unionStructInput = [
-            os.path.join(os.path.dirname(__file__), 'TestVfrSourceFile/unionStruct.i'),
+            os.path.join(os.path.dirname(__file__),
+                         'TestVfrSourceFile/unionStruct.i'),
         ]
         unionStructOutput = [
             {
@@ -229,31 +232,40 @@ class TestVfrcompilSyntax:
         Test formset format.
         """
         formsetList = [
-            os.path.join(os.path.dirname(__file__), 'TestVfrSourceFile/formset.i'),
+            os.path.join(os.path.dirname(__file__),
+                         'TestVfrSourceFile/formset.i'),
         ]
         exceptOutput = [
             [EFI_GUID(0x4b47d616, 0xa8d6, 0x4552,
                       GuidArray(0x9d, 0x44, 0xcc, 0xad, 0x2e, 0xf, 0x4c, 0xf9)),
-             '0x0002', '0x0003'],
+             '0x0002', '0x0003',
+             '0E A7 16 D6 47 4B D6 A8 52 45 9D 44 CC AD 2E 0F 4C F9 02 00 03 00 01 71 99 03 93 45 85 04 4B B4 5E 32 EB 83 26 04 0E'],
         ]
         for index in range(len(formsetList)):
             VfrParser = self.ParseVfrSyntax(formsetList[index])
             self.Visitor.visit(VfrParser.vfrProgram())
             for ch in self.Visitor.Root.Child:
                 if ch.OpCode == EFI_IFR_FORM_SET_OP:
+
                     assert ch.Data.FormSet.Guid.to_string() == \
                            exceptOutput[index][0].to_string()
                     assert ch.Data.FormSet.FormSetTitle == int(
                         exceptOutput[index][1], 16)
                     assert ch.Data.FormSet.Help == int(exceptOutput[index][2],
                                                        16)
+                    # compile opcode
+                    SrcBufferList = exceptOutput[index][3].split(' ')
+                    DestBuffer = ch.Buffer
+                    for i in range(len(SrcBufferList)):
+                        assert int(SrcBufferList[i], 16) == DestBuffer[i]
 
     #
     # FormSet element.
     #
     def test_GuidDefinition(self):
         GuidList = [
-            os.path.join(os.path.dirname(__file__), 'TestVfrSourceFile/formset_guid.i'),
+            os.path.join(os.path.dirname(__file__),
+                         'TestVfrSourceFile/formset_guid.i'),
         ]
         ExpGuidList = [
             EFI_GUID(0x4b47d616, 0xa8d6, 0x4552,
@@ -269,7 +281,8 @@ class TestVfrcompilSyntax:
 
     def test_ClassguidDefinition(self):
         GuidList = [
-            os.path.join(os.path.dirname(__file__), 'TestVfrSourceFile/formset_classguid.i'),
+            os.path.join(os.path.dirname(__file__),
+                         'TestVfrSourceFile/formset_classguid.i'),
         ]
         ExpGuidList = [
             EFI_GUID(0x4b47d616, 0xa8d6, 0x4552,
@@ -285,7 +298,8 @@ class TestVfrcompilSyntax:
 
     def test_ClassDefinition(self):
         ClassNameList = [
-            os.path.join(os.path.dirname(__file__), 'TestVfrSourceFile/formset_class.i'),
+            os.path.join(os.path.dirname(__file__),
+                         'TestVfrSourceFile/formset_class.i'),
         ]
         ExpClassNameList = [
             'DISK_DEVICE',
@@ -300,7 +314,8 @@ class TestVfrcompilSyntax:
 
     def test_SubClassDefinition(self):
         SubClassNameList = [
-            os.path.join(os.path.dirname(__file__), "TestVfrSourceFile/formset_subclass.i"),
+            os.path.join(os.path.dirname(__file__),
+                         "TestVfrSourceFile/formset_subclass.i"),
         ]
 
         ExpSubClassNameList = [
@@ -311,18 +326,19 @@ class TestVfrcompilSyntax:
             VfrParser = self.ParseVfrSyntax(SubClassNameList[index])
             self.Visitor.visit(VfrParser.vfrFormSetDefinition())
 
-
             SubClass = self.GetFormsetAttr("SUBCLASS")
             assert ExpSubClassNameList[index] == SubClass
 
     def test_VfrStatementVarStoreLinear(self):
         VarStoreListInput = [
-            os.path.join(os.path.dirname(__file__),"TestVfrSourceFile/formset_varstore.i"),
+            os.path.join(os.path.dirname(__file__),
+                         "TestVfrSourceFile/formset_varstore.i"),
         ]
         VarStoreListOutput = [
             ['ISCSI_CONFIG_IFR_NVDATA', '0x6666',
              EFI_GUID(0x4b47d616, 0xa8d6, 0x4552,
-                      GuidArray(0x9d, 0x44, 0xcc, 0xad, 0x2e, 0xf, 0x4c, 0xf9))]
+                      GuidArray(0x9d, 0x44, 0xcc, 0xad, 0x2e, 0xf, 0x4c, 0xf9)),
+             '24 2E 16 D6 47 4B D6 A8 52 45 9D 44 CC AD 2E 0F 4C F9 66 66 3C 45 49 53 43 53 49 5F 43 4F 4E 46 49 47 5F 49 46 52 5F 4E 56 44 41 54 41 00']
         ]
 
         for index in range(len(VarStoreListInput)):
@@ -332,34 +348,62 @@ class TestVfrcompilSyntax:
             # except Exception as e:
             #     pass
 
-
-            VarStore, Type = self.GetFormsetAttr("VARSTORE")
+            VarStore, Type, Buffer = self.GetFormsetAttr("VARSTORE")
             assert Type == VarStoreListOutput[index][0]
             assert VarStore.VarStoreId == int(VarStoreListOutput[index][1],
                                               16)
             assert VarStore.Guid.to_string() == VarStoreListOutput[index][
                 2].to_string()
 
+            # compile Opcode
+            SrcBufferList = VarStoreListOutput[index][3].split(' ')
+            for i in range(len(SrcBufferList)):
+                assert int(SrcBufferList[i], 16) == Buffer[i]
+
     def test_vfrFormDefinition(self):
         FormIdListInput = [
-            os.path.join(os.path.dirname(__file__), "TestVfrSourceFile/formset_formid.i"),
+            os.path.join(os.path.dirname(__file__),
+                         "TestVfrSourceFile/formset_formid.i"),
         ]
         ExpFormIdList = [
-            ['0x1000', '0x0002', 9],
+            ['0x0002', '0x0005',
+             [
+                 '01 86 02 00 05 00',
+                 [
+                     '5F 15 35 17 0B 0F A0 87 93 41 B2 66 53 8C 38 AF 48 CE 00 00 30',
+                     '5F 15 35 17 0B 0F A0 87 93 41 B2 66 53 8C 38 AF 48 CE 00 FF FF',
+                     '29 02'
+                 ]
+             ],
+             ],
         ]
 
         for index in range(len(FormIdListInput)):
             VfrParser = self.ParseVfrSyntax(FormIdListInput[index])
             self.Visitor.visit(VfrParser.vfrProgram())
 
-            Form, FormChildLength = self.GetFormsetAttr("FORMID")
+            Form, FormChildBuffer, FormChilds = self.GetFormsetAttr("FORMID")
             assert int(ExpFormIdList[index][0], 16) == Form.FormId
             assert int(ExpFormIdList[index][1], 16) == Form.FormTitle
-            assert ExpFormIdList[index][2] == FormChildLength
+
+            # compile OpCode
+            FormSrcBufferList = ExpFormIdList[index][2][0].split(' ')
+
+            for i in range(len(FormSrcBufferList)):
+                assert int(FormSrcBufferList[i], 16) == FormChildBuffer[i]
+
+            # Compile FormId child Opcode
+            FormChildSrcList = ExpFormIdList[index][2][1]
+            for j in range(len(FormChildSrcList)):
+                ChildSrcList = FormChildSrcList[j].split(' ')
+                ChildDest = FormChilds[j].Buffer
+                for k in range(len(ChildSrcList)):
+                    assert int(ChildSrcList[k], 16) == ChildDest[k]
 
     def test_vfrFormMapDefinition(self):
         FormMapList = [
-            os.path.join(os.path.dirname(__file__), 'TestVfrSourceFile/formset_formmap.i'),
+            os.path.join(os.path.dirname(__file__),
+                         'TestVfrSourceFile/formset_formmap.i'),
         ]
         ExpFormMapList = [
             ['0x0001', '0x0001', EFI_GUID(0xe58809f8, 0xfbc1, 0x48e2,
@@ -381,7 +425,8 @@ class TestVfrcompilSyntax:
 
     def test_vfrStatementImage(self):
         StatementImageList = [
-            os.path.join(os.path.dirname(__file__), "TestVfrSourceFile/formset_StatImage.i")
+            os.path.join(os.path.dirname(__file__),
+                         "TestVfrSourceFile/formset_StatImage.i")
         ]
         ExpStatImageList = [
             '0x0001',
@@ -396,7 +441,8 @@ class TestVfrcompilSyntax:
 
     def test_vfrStatementVarStoreNameValue(self):
         DeafultStoreList = [
-            os.path.join(os.path.dirname(__file__), 'TestVfrSourceFile/formset_StatVarStoreNameValue.i'),
+            os.path.join(os.path.dirname(__file__),
+                         'TestVfrSourceFile/formset_StatVarStoreNameValue.i'),
         ]
         ExpDeafultStoreList = [
             ['0x0001', 'ISCSI_CONFIG_IFR_NVDATA', '0x0002',
@@ -420,7 +466,8 @@ class TestVfrcompilSyntax:
 
     def test_vfrStatementVarStoreEfi(self):
         VarStoreEfiList = [
-            os.path.join(os.path.dirname(__file__), 'TestVfrSourceFile/formset_statementvarstoreefi.i'),
+            os.path.join(os.path.dirname(__file__),
+                         'TestVfrSourceFile/formset_statementvarstoreefi.i'),
         ]
         ExpVarStoreEfiList = [
             ['0x0001', '0x0007', 'PCH_SETUP',
@@ -444,7 +491,8 @@ class TestVfrcompilSyntax:
 
     def test_vfrStatementDisableIfFormSet(self):
         DisableIfList = [
-            os.path.join(os.path.dirname(__file__), 'TestVfrSourceFile/formset_disableif.i'),
+            os.path.join(os.path.dirname(__file__),
+                         'TestVfrSourceFile/formset_disableif.i'),
         ]
         ExpDisableIfList = [
             'TRUE'
@@ -458,7 +506,8 @@ class TestVfrcompilSyntax:
 
     def test_vfrStatementSuppressIfFormSet(self):
         SuppressIfList = [
-            os.path.join(os.path.dirname(__file__), 'TestVfrSourceFile/formset_suppressif.i'),
+            os.path.join(os.path.dirname(__file__),
+                         'TestVfrSourceFile/formset_suppressif.i'),
         ]
 
         ExpSuppressIfList = [
