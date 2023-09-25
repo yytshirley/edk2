@@ -152,7 +152,7 @@ def vfr_compiler(request):
         compiler = VfrCompiler(cmd)
         request.cls.compiler = compiler
         yield
-        if os.path.exists(compiler.Options.LanuchVfrCompiler):
+        if os.path.exists(compiler.Options.JsonFileName):
             os.remove(compiler.Options.JsonFileName)
         if os.path.exists(compiler.Options.PkgOutputFileName):
             os.remove(compiler.Options.PkgOutputFileName)
