@@ -1,29 +1,17 @@
 # Unit testing of vfrcompiler
 
-## Project Repo link
-[edk2](https://github.com/yytshirley/edk2.git)
 
-## Environmental 
-- clone edk2 repo
-- Checkout branch to Phase1PyVfrCompile
-- run build
+## Test points
+- Unit testing and system testing are implemented in the test_Vfrcompiler.py test file.
+
+    Each test case in the testing class is independent and all test cases are executed 
+    sequentially, achieving system testing.
+- The parsing test of G4 file syntax in VfrCompiler has been implemented in file test_vfr_syntax.py.
 
 ## Pytest
 - install: pip install pytest
 
 ## Run test
 - cd edk2\BaseTools\Source\Python\tests
-- open pytest.ing and Modify the parameters that need to be used
-```
-python_files =
-    # test_split.py
-    test_Vfrcompiler.py
-
-    # Before performing yaml testing, please perform vfr testing first,
-    # as yaml testing depends on the output file after vfr testing
-    #test_YamlCompiler.py
-
-This parameter selects the test file.
-```
-
-- run pytest in cmd
+- Execute the following command on the terminal
+> pytest vfr_yaml_compiler
