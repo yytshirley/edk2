@@ -13,6 +13,9 @@
 from __future__ import print_function
 import Common.LongFilePathOs as os, codecs, re
 import shlex
+import json
+import argparse
+##
 import Common.EdkLogger as EdkLogger
 from io import BytesIO
 from Common.BuildToolError import *
@@ -221,7 +224,9 @@ class UniFileClassObject(object):
         self.FileList = FileList
         self.Token = 2
         self.LanguageDef = []                   #[ [u'LanguageIdentifier', u'PrintableName'], ... ]
+        self.LanguageDefDict = {}
         self.OrderedStringList = {}             #{ u'LanguageIdentifier' : [StringDefClassObject]  }
+        self.OrderedStringTestDict = {}
         self.OrderedStringDict = {}             #{ u'LanguageIdentifier' : {StringName:(IndexInList)}  }
         self.OrderedStringListByToken = {}      #{ u'LanguageIdentifier' : {Token: StringDefClassObject} }
         self.IsCompatibleMode = IsCompatibleMode
@@ -256,6 +261,7 @@ class UniFileClassObject(object):
 
         if not IsLangInDef:
             self.LanguageDef.append([LangName, LangPrintName])
+            self.LanguageDefDict[LangName] = LangPrintName
 
         #
         # Add language string
@@ -278,6 +284,7 @@ class UniFileClassObject(object):
                         OtherLang = FirstLangName
                     self.OrderedStringList[LangName].append (StringDefClassObject(Item.StringName, '', Item.Referenced, Item.Token, OtherLang))
                     self.OrderedStringDict[LangName][Item.StringName] = len(self.OrderedStringList[LangName]) - 1
+                    self.OrderedStringTestDict[LangName][Item.StringName] = Item.Value
         return True
 
     @staticmethod
@@ -555,6 +562,7 @@ class UniFileClassObject(object):
         if Language not in self.OrderedStringList:
             self.OrderedStringList[Language] = []
             self.OrderedStringDict[Language] = {}
+            self.OrderedStringTestDict[Language] = {}
 
         IsAdded = True
         if Name in self.OrderedStringDict[Language]:
@@ -570,6 +578,7 @@ class UniFileClassObject(object):
             if Index == -1:
                 self.OrderedStringList[Language].append(StringDefClassObject(Name, Value, Referenced, Token, UseOtherLangDef))
                 self.OrderedStringDict[Language][Name] = Token
+                self.OrderedStringTestDict[Language][Name] = Value
                 for LangName in self.LanguageDef:
                     #
                     # New STRING token will be added into all language string lists.
@@ -582,9 +591,11 @@ class UniFileClassObject(object):
                             OtherLangDef = Language
                         self.OrderedStringList[LangName[0]].append(StringDefClassObject(Name, '', Referenced, Token, OtherLangDef))
                         self.OrderedStringDict[LangName[0]][Name] = len(self.OrderedStringList[LangName[0]]) - 1
+                        self.OrderedStringTestDict[Language][Name] = Value
             else:
                 self.OrderedStringList[Language].insert(Index, StringDefClassObject(Name, Value, Referenced, Token, UseOtherLangDef))
                 self.OrderedStringDict[Language][Name] = Index
+                self.OrderedStringTestDict[Language][Name] = Value
 
     #
     # Set the string as referenced
@@ -665,13 +676,22 @@ class UniFileClassObject(object):
     #
     # Show the instance itself
     #
-    def ShowMe(self):
-        print(self.LanguageDef)
-        #print self.OrderedStringList
-        for Item in self.OrderedStringList:
-            print(Item)
-            for Member in self.OrderedStringList[Item]:
-                print(str(Member))
+    def ShowMe(self, outputdictfile):
+        output_data = {
+            "LanguageDefDict": self.LanguageDefDict,
+            "OrderedStringTestDict": self.OrderedStringTestDict
+        }
+
+        with open(outputdictfile, 'w') as outputfile:
+            json.dump(output_data, outputfile, indent=4)
+            
+    # def ShowMe(self):
+    #     print(self.LanguageDef)
+    #     #print self.OrderedStringList
+    #     for Item in self.OrderedStringList:
+    #         print(Item)
+    #         for Member in self.OrderedStringList[Item]:
+    #             print(str(Member))
 
 # This acts like the main() function for the script, unless it is 'import'ed into another
 # script.

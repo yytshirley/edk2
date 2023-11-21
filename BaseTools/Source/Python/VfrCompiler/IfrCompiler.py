@@ -556,6 +556,7 @@ class VfrCompiler:
         else:
             if self.Options.CreateYamlFile:
                 self.VfrTree.DumpYamlForXMLCLI()
+                self.VfrTree.DumpYamlForConfigEditor()
             self.SET_RUN_STATUS(COMPILER_RUN_STATUS.STATUS_FINISHED)
 
     def SET_RUN_STATUS(self, Status):

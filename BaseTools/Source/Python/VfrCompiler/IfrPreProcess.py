@@ -6,6 +6,7 @@
 ##
 
 import re
+import json
 import Common.EdkLogger as EdkLogger
 from antlr4 import *
 from pathlib import Path
@@ -71,7 +72,7 @@ class PreProcessDB:
     def Preprocess(self):
         self.HeaderFiles = self._ExtractHeaderFiles()
         # Read Uni string token/id definitions in StrDef.h file
-        self.UniDict = self._GetUniDicts()
+        self.UniDict, self.UniDisPlayDict = self._GetUniDicts()
         # Read definitions in vfr file
         self.VfrDict = self._GetVfrDicts()
         self.Preprocessed = True
@@ -154,7 +155,21 @@ class PreProcessDB:
         FileName = self.Options.UniStrDefFileName
         UniDict = {}
         self._ParseDefines(FileName, UniDict)
-        return UniDict
+        DisPlayUniDict = {}
+        if self.Options.UniStrDisplayFile is None:
+            self.Options.UniStrDisplayFile = str(Path(self.Options.OutputDirectory) / f"{self.Options.ModuleName}Uni.json")
+        # String Token : DisPlay String}
+        with open(self.Options.UniStrDisplayFile) as f:
+            Dict = json.load(f)
+        Dict = Dict["OrderedStringTestDict"]["en-US"]
+        for Key in Dict.keys():
+            for UniKey in UniDict.keys():
+                if Key == UniDict[UniKey]:
+                    DisPlayUniDict[UniKey] = Dict[Key]
+                    break
+
+        return UniDict, DisPlayUniDict
+
 
     def _GetVfrDicts(self):
         VfrDict = {}
