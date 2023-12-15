@@ -41,60 +41,43 @@ PAGE_TABLE_POOL  *mPageTablePool = NULL;
 BOOLEAN  mIsReadOnlyPageTable = FALSE;
 
 /**
-  Disable Write Protect on pages marked as read-only if Cr0.Bits.WP is 1.
+  Write unprotect read-only pages if Cr0.Bits.WP is 1.
 
-  @param[out]  WpEnabled      If Cr0.WP is enabled.
-  @param[out]  CetEnabled     If CET is enabled.
+  @param[out]  WriteProtect      If Cr0.Bits.WP is enabled.
+
 **/
 VOID
-DisableReadOnlyPageWriteProtect (
-  OUT BOOLEAN  *WpEnabled,
-  OUT BOOLEAN  *CetEnabled
+SmmWriteUnprotectReadOnlyPage (
+  OUT BOOLEAN  *WriteProtect
   )
 {
   IA32_CR0  Cr0;
 
-  *CetEnabled = ((AsmReadCr4 () & CR4_CET_ENABLE) != 0) ? TRUE : FALSE;
-  Cr0.UintN   = AsmReadCr0 ();
-  *WpEnabled  = (Cr0.Bits.WP != 0) ? TRUE : FALSE;
-  if (*WpEnabled) {
-    if (*CetEnabled) {
-      //
-      // CET must be disabled if WP is disabled. Disable CET before clearing CR0.WP.
-      //
-      DisableCet ();
-    }
-
+  Cr0.UintN     = AsmReadCr0 ();
+  *WriteProtect = (Cr0.Bits.WP != 0);
+  if (*WriteProtect) {
     Cr0.Bits.WP = 0;
     AsmWriteCr0 (Cr0.UintN);
   }
 }
 
 /**
-  Enable Write Protect on pages marked as read-only.
+  Write protect read-only pages.
 
-  @param[out]  WpEnabled      If Cr0.WP should be enabled.
-  @param[out]  CetEnabled     If CET should be enabled.
+  @param[in]  WriteProtect      If Cr0.Bits.WP should be enabled.
+
 **/
 VOID
-EnableReadOnlyPageWriteProtect (
-  BOOLEAN  WpEnabled,
-  BOOLEAN  CetEnabled
+SmmWriteProtectReadOnlyPage (
+  IN  BOOLEAN  WriteProtect
   )
 {
   IA32_CR0  Cr0;
 
-  if (WpEnabled) {
+  if (WriteProtect) {
     Cr0.UintN   = AsmReadCr0 ();
     Cr0.Bits.WP = 1;
     AsmWriteCr0 (Cr0.UintN);
-
-    if (CetEnabled) {
-      //
-      // re-enable CET.
-      //
-      EnableCet ();
-    }
   }
 }
 
@@ -121,7 +104,7 @@ InitializePageTablePool (
   )
 {
   VOID     *Buffer;
-  BOOLEAN  WpEnabled;
+  BOOLEAN  WriteProtect;
   BOOLEAN  CetEnabled;
 
   //
@@ -159,9 +142,11 @@ InitializePageTablePool (
   // If page table memory has been marked as RO, mark the new pool pages as read-only.
   //
   if (mIsReadOnlyPageTable) {
-    DisableReadOnlyPageWriteProtect (&WpEnabled, &CetEnabled);
+    WRITE_UNPROTECT_RO_PAGES (WriteProtect, CetEnabled);
+
     SmmSetMemoryAttributes ((EFI_PHYSICAL_ADDRESS)(UINTN)Buffer, EFI_PAGES_TO_SIZE (PoolPages), EFI_MEMORY_RO);
-    EnableReadOnlyPageWriteProtect (WpEnabled, CetEnabled);
+
+    WRITE_PROTECT_RO_PAGES (WriteProtect, CetEnabled);
   }
 
   return TRUE;
@@ -1011,7 +996,7 @@ SetMemMapAttributes (
   IA32_MAP_ENTRY                        *Map;
   UINTN                                 Count;
   UINT64                                MemoryAttribute;
-  BOOLEAN                               WpEnabled;
+  BOOLEAN                               WriteProtect;
   BOOLEAN                               CetEnabled;
 
   SmmGetSystemConfigurationTable (&gEdkiiPiSmmMemoryAttributesTableGuid, (VOID **)&MemoryAttributesTable);
@@ -1057,19 +1042,22 @@ SetMemMapAttributes (
 
   ASSERT_RETURN_ERROR (Status);
 
-  DisableReadOnlyPageWriteProtect (&WpEnabled, &CetEnabled);
+  WRITE_UNPROTECT_RO_PAGES (WriteProtect, CetEnabled);
 
   MemoryMap = MemoryMapStart;
   for (Index = 0; Index < MemoryMapEntryCount; Index++) {
     DEBUG ((DEBUG_VERBOSE, "SetAttribute: Memory Entry - 0x%lx, 0x%x\n", MemoryMap->PhysicalStart, MemoryMap->NumberOfPages));
-    if (MemoryMap->Type == EfiRuntimeServicesCode) {
-      MemoryAttribute = EFI_MEMORY_RO;
-    } else {
-      ASSERT ((MemoryMap->Type == EfiRuntimeServicesData) || (MemoryMap->Type == EfiConventionalMemory));
-      //
-      // Set other type memory as NX.
-      //
-      MemoryAttribute = EFI_MEMORY_XP;
+    MemoryAttribute = MemoryMap->Attribute & EFI_MEMORY_ACCESS_MASK;
+    if (MemoryAttribute == 0) {
+      if (MemoryMap->Type == EfiRuntimeServicesCode) {
+        MemoryAttribute = EFI_MEMORY_RO;
+      } else {
+        ASSERT ((MemoryMap->Type == EfiRuntimeServicesData) || (MemoryMap->Type == EfiConventionalMemory));
+        //
+        // Set other type memory as NX.
+        //
+        MemoryAttribute = EFI_MEMORY_XP;
+      }
     }
 
     //
@@ -1087,7 +1075,8 @@ SetMemMapAttributes (
     MemoryMap = NEXT_MEMORY_DESCRIPTOR (MemoryMap, DescriptorSize);
   }
 
-  EnableReadOnlyPageWriteProtect (WpEnabled, CetEnabled);
+  WRITE_PROTECT_RO_PAGES (WriteProtect, CetEnabled);
+
   FreePool (Map);
 
   PatchSmmSaveStateMap ();
@@ -1394,14 +1383,14 @@ SetUefiMemMapAttributes (
   UINTN                  MemoryMapEntryCount;
   UINTN                  Index;
   EFI_MEMORY_DESCRIPTOR  *Entry;
-  BOOLEAN                WpEnabled;
+  BOOLEAN                WriteProtect;
   BOOLEAN                CetEnabled;
 
   PERF_FUNCTION_BEGIN ();
 
   DEBUG ((DEBUG_INFO, "SetUefiMemMapAttributes\n"));
 
-  DisableReadOnlyPageWriteProtect (&WpEnabled, &CetEnabled);
+  WRITE_UNPROTECT_RO_PAGES (WriteProtect, CetEnabled);
 
   if (mUefiMemoryMap != NULL) {
     MemoryMapEntryCount = mUefiMemoryMapSize/mUefiDescriptorSize;
@@ -1481,7 +1470,7 @@ SetUefiMemMapAttributes (
     }
   }
 
-  EnableReadOnlyPageWriteProtect (WpEnabled, CetEnabled);
+  WRITE_PROTECT_RO_PAGES (WriteProtect, CetEnabled);
 
   //
   // Do not free mUefiMemoryAttributesTable, it will be checked in IsSmmCommBufferForbiddenAddress().
@@ -1872,7 +1861,7 @@ SetPageTableAttributes (
   VOID
   )
 {
-  BOOLEAN  WpEnabled;
+  BOOLEAN  WriteProtect;
   BOOLEAN  CetEnabled;
 
   if (!IfReadOnlyPageTableNeeded ()) {
@@ -1886,7 +1875,7 @@ SetPageTableAttributes (
   // Disable write protection, because we need mark page table to be write protected.
   // We need *write* page table memory, to mark itself to be *read only*.
   //
-  DisableReadOnlyPageWriteProtect (&WpEnabled, &CetEnabled);
+  WRITE_UNPROTECT_RO_PAGES (WriteProtect, CetEnabled);
 
   // Set memory used by page table as Read Only.
   DEBUG ((DEBUG_INFO, "Start...\n"));
@@ -1895,7 +1884,8 @@ SetPageTableAttributes (
   //
   // Enable write protection, after page table attribute updated.
   //
-  EnableReadOnlyPageWriteProtect (TRUE, CetEnabled);
+  WRITE_PROTECT_RO_PAGES (TRUE, CetEnabled);
+
   mIsReadOnlyPageTable = TRUE;
 
   //
