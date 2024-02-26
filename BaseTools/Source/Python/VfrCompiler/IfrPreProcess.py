@@ -163,7 +163,7 @@ class PreProcessDB:
         if os.path.exists(self.Options.UniStrDisplayFile):
             with open(self.Options.UniStrDisplayFile) as f:
                 Dict = json.load(f)
-            Dict = Dict["OrderedStringTestDict"]["en-US"]
+            Dict = Dict["UniString"]["en-US"]
             for Key in Dict.keys():
                 for UniKey in UniDict.keys():
                     if Key == UniDict[UniKey]:
