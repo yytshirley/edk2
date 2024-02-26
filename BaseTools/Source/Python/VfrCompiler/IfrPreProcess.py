@@ -6,6 +6,7 @@
 ##
 
 import re
+import os
 import json
 import Common.EdkLogger as EdkLogger
 from antlr4 import *
@@ -159,14 +160,15 @@ class PreProcessDB:
         if self.Options.UniStrDisplayFile is None:
             self.Options.UniStrDisplayFile = str(Path(self.Options.OutputDirectory) / f"{self.Options.ModuleName}Uni.json")
         # String Token : DisPlay String}
-        with open(self.Options.UniStrDisplayFile) as f:
-            Dict = json.load(f)
-        Dict = Dict["OrderedStringTestDict"]["en-US"]
-        for Key in Dict.keys():
-            for UniKey in UniDict.keys():
-                if Key == UniDict[UniKey]:
-                    DisPlayUniDict[UniKey] = Dict[Key]
-                    break
+        if os.path.exists(self.Options.UniStrDisplayFile):
+            with open(self.Options.UniStrDisplayFile) as f:
+                Dict = json.load(f)
+            Dict = Dict["OrderedStringTestDict"]["en-US"]
+            for Key in Dict.keys():
+                for UniKey in UniDict.keys():
+                    if Key == UniDict[UniKey]:
+                        DisPlayUniDict[UniKey] = Dict[Key]
+                        break
 
         return UniDict, DisPlayUniDict
 
