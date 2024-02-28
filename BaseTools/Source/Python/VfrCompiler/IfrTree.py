@@ -4,6 +4,8 @@
 # Copyright (c) 2022-, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 ##
+import json
+import yaml
 
 import Common.EdkLogger as EdkLogger
 from Common.BuildToolError import *
@@ -354,6 +356,94 @@ class IfrTree:
             for ChildNode in Root.Child:
                 self._GenRecordListFileDfs(ChildNode, RecordLines)
 
+    def _StructToDict(self):
+        StructDict = dict()
+        pNode = gVfrVarDataTypeDB.GetDataTypeList()
+        StructDict.setdefault("DataStruct", {})
+        while pNode is not None:
+            StructDict["DataStruct"].setdefault(pNode.TypeName, [])
+            FNode = pNode.Members
+            while FNode is not None:
+                fNodeDic = dict()
+                fNodeDic.setdefault('Name', FNode.FieldName)
+                if FNode.ArrayNum > 0:
+                    fNodeDic.setdefault('Type',
+                                        f"{FNode.FieldType.TypeName}[{FNode.ArrayNum}]")
+                else:
+                    fNodeDic.setdefault('Type', f"{FNode.FieldType.TypeName}")
+
+                fNodeDic.setdefault("Offset", FNode.Offset)
+                StructDict["DataStruct"][pNode.TypeName].append(fNodeDic)
+                FNode = FNode.Next
+            pNode = pNode.Next
+
+        StructDict.setdefault("DataStructAttribute", dict())
+        pNode = gVfrVarDataTypeDB.GetDataTypeList()
+        while pNode is not None:
+            pNodeDict = dict()
+            pNodeDict.setdefault(pNode.TypeName, {"Alignment": pNode.Align,
+                                                  "TotalSize": pNode.TotalSize})
+            StructDict["DataStructAttribute"].update(pNodeDict)
+            pNode = pNode.Next
+
+        StructDict.setdefault("VarDefine", dict())
+        pVsNode = gVfrDataStorage.GetBufferVarStoreList()
+        while pVsNode is not None:
+            StructDict["VarDefine"].update({
+                pVsNode.VarStoreName: {"Type": pVsNode.DataType.TypeName,
+                                       "Attributes": pVsNode.Attributes,
+                                       "VarStoreId": pVsNode.VarStoreId,
+                                       "VendorGuid": pVsNode.Guid.to_string()}
+            })
+            pVsNode = pVsNode.Next
+
+        StructDict.setdefault("Data", list())
+        pVsNode = gVfrBufferConfig.GetVarItemList()
+        while pVsNode is not None:
+            if pVsNode.Id is None:
+                pVsNode = pVsNode.Next
+                continue
+            pInfoNode = pVsNode.InfoStrList
+            while pInfoNode is not None:
+                pInfoDict = dict()
+                pInfoDict.setdefault("VendorGuid", pVsNode.Guid.to_string())
+                pInfoDict.setdefault("VarName", pVsNode.Name)
+                pInfoDict.setdefault("DefaultStore", pVsNode.Id)
+                pInfoDict.setdefault("Size", pInfoNode.Width)
+                pInfoDict.setdefault("Offset", pInfoNode.Offset)
+                if pInfoNode.Type == EFI_IFR_TYPE_DATE and type(
+                        pInfoNode.Value) == EFI_HII_DATE:
+                    pInfoDict.setdefault("Value",
+                                         f"{pInfoNode.Value.Year}/{pInfoNode.Value.Month}/{pInfoNode.Value.Day}")
+                elif pInfoNode.Type == EFI_IFR_TYPE_TIME and type(
+                        pInfoNode.Value) == EFI_HII_TIME:
+                    pInfoDict.setdefault("Value",
+                                         f"{pInfoNode.Value.Hour}:{pInfoNode.Value.Minute}:{pInfoNode.Value.Second}")
+                elif pInfoNode.Type == EFI_IFR_TYPE_REF and type(
+                        pInfoNode.Value) == EFI_HII_REF:
+                    pInfoDict.setdefault("Value",
+                                         f"{pInfoNode.Value.QuestionId};{pInfoNode.Value.FormId};{pInfoNode.Value.FormSetGuid.to_string()};{pInfoNode.Value.DevicePath}")
+                else:
+                    pInfoDict.setdefault("Value", pInfoNode.Value)
+                StructDict["Data"].append(pInfoDict)
+                pInfoNode = pInfoNode.Next
+            pVsNode = pVsNode.Next
+        StructDict["Data"].append(
+            {"VendorGuid": "NA", "VarName": "NA", "DefaultStore": "NA",
+             "Size": 0, "Offset": 0, "Value": 0x00})
+        return StructDict
+
+    def _DumpJson(self):
+        StructDict = self._StructToDict()
+        FileName = self.Options.JsonFileName
+        try:
+            with open(FileName, "w") as f:
+                json.dump(StructDict, f, indent=4)
+        except Exception:
+            EdkLogger.error(
+                "VfrCompiler", FILE_OPEN_FAILURE,
+                "File open failed for %s" % FileName, None
+            )
     def DumpJson(self):
         FileName = self.Options.JsonFileName
         try:
@@ -505,6 +595,9 @@ class IfrTree:
             with open(FileName, "w", encoding="utf-8") as f:
                 f.write("## DO NOT REMOVE -- YAML Mode\n")
                 self._DumpYamlForXMLCLIDfs(self.Root, f)
+                # Add Struct Data
+                StructDict = self._StructToDict()
+                f.write(yaml.dump(StructDict, indent=4))
             f.close()
         except Exception:
             EdkLogger.error(
