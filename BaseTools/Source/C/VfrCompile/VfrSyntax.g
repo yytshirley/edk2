@@ -50,6 +50,7 @@ VfrParserStart (
 {
   ParserBlackBox<CVfrDLGLexer, EfiVfrParser, ANTLRToken> VfrParser(File);
   VfrParser.parser()->SetOverrideClassGuid (InputInfo->OverrideClassGuid);
+  VfrParser.parser()->SetIsCatchDefaultEnable(InputInfo->IsCatchDefaultEnable);
   return VfrParser.parser()->vfrProgram();
 }
 >>
