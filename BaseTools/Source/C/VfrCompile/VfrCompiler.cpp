@@ -78,6 +78,7 @@ CVfrCompiler::OptionInitialization (
   mOptions.WarningAsError                = FALSE;
   mOptions.AutoDefault                   = FALSE;
   mOptions.CheckDefault                  = FALSE;
+  mOptions.IsCatchDefaultEnable          = FALSE;
   memset (&mOptions.OverrideClassGuid, 0, sizeof (EFI_GUID));
 
   if (Argc == 1) {
@@ -95,6 +96,8 @@ CVfrCompiler::OptionInitialization (
       Version ();
       SET_RUN_STATUS (STATUS_DEAD);
       return;
+    } else if (stricmp(Argv[Index], "--catch_default") == 0){
+      mOptions.IsCatchDefaultEnable = TRUE;
     } else if (stricmp(Argv[Index], "-l") == 0) {
       mOptions.CreateRecordListFile = TRUE;
       gCIfrRecordInfoDB.TurnOn ();
@@ -179,7 +182,6 @@ CVfrCompiler::OptionInitialization (
       goto Fail;
     }
     strcpy (mOptions.VfrFileName, Argv[Index]);
-
     if (mOptions.OutputDirectory == NULL) {
       mOptions.OutputDirectory = (CHAR8 *) malloc (1);
       if (mOptions.OutputDirectory == NULL) {
@@ -679,7 +681,7 @@ CVfrCompiler::Compile (
     DebugError (NULL, 0, 0001, "Error opening the input file", "%s", InFileName);
     goto Fail;
   }
-
+  InputInfo.IsCatchDefaultEnable = mOptions.IsCatchDefaultEnable;
   if (mOptions.HasOverrideClassGuid) {
     InputInfo.OverrideClassGuid = &mOptions.OverrideClassGuid;
   } else {
@@ -937,5 +939,3 @@ main (
 
   return GetUtilityStatus ();
 }
-
-

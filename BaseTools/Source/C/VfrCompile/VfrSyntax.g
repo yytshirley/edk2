@@ -50,6 +50,7 @@ VfrParserStart (
 {
   ParserBlackBox<CVfrDLGLexer, EfiVfrParser, ANTLRToken> VfrParser(File);
   VfrParser.parser()->SetOverrideClassGuid (InputInfo->OverrideClassGuid);
+  VfrParser.parser()->SetIsCatchDefaultEnable(InputInfo->IsCatchDefaultEnable);
   return VfrParser.parser()->vfrProgram();
 }
 >>
@@ -975,7 +976,15 @@ vfrExtensionData[UINT8 *DataBuff, UINT32 Size, CHAR8 *TypeName, UINT32 TypeSize,
 
 vfrStatementDefaultStore :
   << UINT16  DefaultId = EFI_HII_DEFAULT_CLASS_STANDARD; >>
-  D:DefaultStore N:StringIdentifier ","
+  D:DefaultStore N:StringIdentifier ","             <<
+                                                      if (mIsCatchDefaultEnable) {
+                                                      gCVfrErrorHandle.HandleWarning (
+                                                          VFR_WARNING_UNSUPPORTED,
+                                                          D->getLine(),
+                                                          D->getText()
+                                                          );
+                                                      }
+                                                    >>
   Prompt "=" "STRING_TOKEN" "\(" S:Number "\)"
   {
     "," Attribute "=" A:Number                      << DefaultId = _STOU16(A->getText(), A->getLine()); >>
@@ -1775,7 +1784,11 @@ vfrStatementDefault :
      CIfrNumeric           *NumericQst   = NULL;
 
   >>
-  D:Default                                         
+  D:Default                                         <<
+                                                        if (mIsCatchDefaultEnable) {
+                                                          DefaultValueError(VFR_RETURN_UNSUPPORTED, D->getLine());
+                                                        }
+                                                    >>                                         
   (
     (
       "=" vfrConstantValueField[_GET_CURRQEST_DATATYPE(), *Val, ArrayType] ","  
@@ -1970,11 +1983,15 @@ vfrStatementInvalid :
   ;
 
 flagsField :
-  Number 
-  | InteractiveFlag 
-  | ManufacturingFlag 
-  | DefaultFlag 
-  | ResetRequiredFlag 
+  Number
+  | InteractiveFlag
+  | ManufacturingFlag
+  | D:DefaultFlag                                      <<
+                                                          if (mIsCatchDefaultEnable) {
+                                                            DefaultValueError(VFR_RETURN_UNSUPPORTED, D->getLine());
+                                                          }
+                                                       >>
+  | ResetRequiredFlag
   | ReconnectRequiredFlag
   | N:NVAccessFlag                                     <<
                                                           gCVfrErrorHandle.HandleWarning (
@@ -3790,7 +3807,12 @@ oneofoptionFlagsField [UINT8 & HFlags, UINT8 & LFlags] :
   | RestStyleFlag                                      << $HFlags |= 0x20; >>
   | ReconnectRequiredFlag                              << $HFlags |= 0x40; >>
   | ManufacturingFlag                                  << $LFlags |= 0x20; >>
-  | DefaultFlag                                        << $LFlags |= 0x10; >>
+  | D:DefaultFlag                                      <<
+                                                          $LFlags |= 0x10;
+                                                          if (mIsCatchDefaultEnable) {
+                                                            DefaultValueError(VFR_RETURN_UNSUPPORTED, D->getLine());
+                                                            }
+                                                       >>
   | A:NVAccessFlag                                     <<
                                                           gCVfrErrorHandle.HandleWarning (
                                                             VFR_WARNING_OBSOLETED_FRAMEWORK_OPCODE,
@@ -4837,6 +4859,7 @@ spanFlags [UINT8 & Flags] :
 class EfiVfrParser {
 <<
 private:
+  BOOLEAN             mIsCatchDefaultEnable;
   UINT8               mParserStatus;
   BOOLEAN             mConstantOnlyInExpression;
 
@@ -4880,6 +4903,7 @@ public:
   VOID                _PCATCH (IN EFI_VFR_RETURN_CODE, IN ANTLRTokenPtr);
   VOID                _PCATCH (IN EFI_VFR_RETURN_CODE, IN UINT32);
   VOID                _PCATCH (IN EFI_VFR_RETURN_CODE, IN UINT32, IN CONST CHAR8 *);
+  VOID                DefaultValueError (IN EFI_VFR_RETURN_CODE, IN UINT32);
 
   VOID                syn     (ANTLRAbstractToken  *, ANTLRChar *, SetWordType *, ANTLRTokenType, INT32);
 
@@ -4909,6 +4933,7 @@ public:
   VOID                IdEqIdDoSpecial       (IN UINT32 &, IN UINT32, IN EFI_QUESTION_ID, IN CHAR8 *, IN UINT32, IN EFI_QUESTION_ID, IN CHAR8 *, IN UINT32, IN EFI_COMPARE_TYPE);
   VOID                IdEqListDoSpecial     (IN UINT32 &, IN UINT32, IN EFI_QUESTION_ID, IN CHAR8 *, IN UINT32, IN UINT16, IN UINT16 *);
   VOID                SetOverrideClassGuid  (IN EFI_GUID *);
+  VOID                SetIsCatchDefaultEnable (BOOLEAN IsCatchDefaultEnable);
 >>
 }
 
@@ -5084,6 +5109,17 @@ EfiVfrParser::_PCATCH (
   )
 {
   mParserStatus = mParserStatus + gCVfrErrorHandle.HandleError (ReturnCode, LineNum, (CHAR8 *) ErrorMsg);
+}
+
+VOID
+EfiVfrParser::DefaultValueError (
+  IN EFI_VFR_RETURN_CODE ReturnCode,
+  IN UINT32              LineNum
+  )
+{
+  CHAR8 ErrorMsg[100];
+  sprintf(ErrorMsg, "please remove the default value / defaultstore in line %d", LineNum);
+  mParserStatus = mParserStatus + gCVfrErrorHandle.HandleError (ReturnCode, LineNum, ErrorMsg);
 }
 
 VOID
@@ -5686,6 +5722,12 @@ VOID
 EfiVfrParser::SetOverrideClassGuid (IN EFI_GUID *OverrideClassGuid)
 {
   mOverrideClassGuid = OverrideClassGuid;
+}
+
+VOID
+EfiVfrParser::SetIsCatchDefaultEnable (BOOLEAN IsCatchDefaultEnable)
+{
+  mIsCatchDefaultEnable = IsCatchDefaultEnable;
 }
 
 VOID
