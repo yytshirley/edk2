@@ -96,6 +96,7 @@ struct SBufferNode {
 
 typedef struct {
   EFI_GUID *OverrideClassGuid;
+  BOOLEAN IsCatchDefaultEnable;
 } INPUT_INFO_TO_SYNTAX;
 
 class CFormPkg {

@@ -52,6 +52,7 @@ typedef struct {
   BOOLEAN WarningAsError;
   BOOLEAN AutoDefault;
   BOOLEAN CheckDefault;
+  BOOLEAN IsCatchDefaultEnable;
 } OPTIONS;
 
 typedef enum {
